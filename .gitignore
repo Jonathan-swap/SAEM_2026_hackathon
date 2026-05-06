@@ -227,6 +227,7 @@ __marimo__/
 # Data — DO NOT commit synthetic dataset
 data/*.xlsx
 data/*.csv
+data/*.docx
 
 # Generated outputs (regenerate from scripts)
 task1_drug_identifier/out/
