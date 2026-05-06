@@ -6,9 +6,7 @@ The dataset is not committed to this repository. It was provided by the SAEM26 H
 
 ## Setup
 
-Place the following file in this folder:
-
-- `Hackathon_Data_Release_1_SHARE.xlsx`
+Place the hackathon data xlsx file in this folder.
 
 The file has three sheets:
 

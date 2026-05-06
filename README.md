@@ -32,6 +32,7 @@ hackathon/
 ├── task3_triage_calculator/
 │   └── app.R                      # Shiny calculator app
 ├── requirements.txt               # Python dependencies
+├── setup.sh                       # setup script
 └── README.md
 ```
 
