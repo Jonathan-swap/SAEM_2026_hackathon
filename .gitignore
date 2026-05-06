@@ -216,3 +216,23 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# R / RStudio
+.Rproj.user/
+.Rhistory
+.RData
+.Ruserdata
+*.Rproj
+
+# Data — DO NOT commit synthetic dataset
+data/*.xlsx
+data/*.csv
+
+# Generated outputs (regenerate from scripts)
+task1_drug_identifier/out/
+task2_disposition/out/
+
+# OS / editor
+.DS_Store
+.vscode/
+*.swp
