@@ -37,23 +37,24 @@ hackathon/
 
 ## Setup
 
-### Python
+Run the setup.sh script once after cloning. It creates a Python virtual environment, installs dependencies, and creates the output folders the pipeline writes to.
 
+```bash 
+chmod +x setup.sh   # one-time, makes the script executable
+./setup.sh
+```
+
+Then activate the virtual environment in your shell:
 ```bash
-python3 -m venv .venv
 source .venv/bin/activate
-pip install -r requirements.txt
 ```
 
-### R
-
-```r
-install.packages("shiny")
+Run this command in the terminal to install shiny for the R app:
+```bash
+R -e "install.packages('shiny', repos='https://cloud.r-project.org')"
 ```
 
-### Data
-
-Place `Hackathon_Data_Release_1_SHARE.xlsx` in the `data/` folder. See `data/README.md`.
+Place hackathon data in the `data/` folder. See `data/README.md`.
 
 ## Running the Pipeline
 
