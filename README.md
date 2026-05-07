@@ -50,9 +50,9 @@ Then activate the virtual environment in your shell:
 source .venv/bin/activate
 ```
 
-Run this command in the terminal to install shiny for the R app:
+Run this command in the terminal to install shiny and here for the R app:
 ```bash
-R -e "install.packages('shiny', repos='https://cloud.r-project.org')"
+R -e "install.packages(c('shiny','here'), repos='https://cloud.r-project.org')"
 ```
 
 Place hackathon data in the `data/` folder. See `data/README.md`.

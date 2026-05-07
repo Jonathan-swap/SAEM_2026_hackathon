@@ -1,15 +1,18 @@
 # SAEM26 Hackathon — Task 3 triage calculator.
 # Enter triage vitals once. App predicts the likely drug
 # and shows a clean vitals summary to paste into the EMR.
+# Run from repo root: R -e "shiny::runApp('task3_triage calculator/App.R')"
 
 library(shiny)
+library(here)
 
 # ---- Load model + scaling exported from Task 1 ----
-TASK1_OUT <- "/task1_drug_identifier/out"
+TASK1_OUT <- here("task1_drug_identifier", "out")
 coefs   <- read.csv(file.path(TASK1_OUT, "model_coefficients.csv"))
 scaling <- read.csv(file.path(TASK1_OUT, "feature_scaling.csv"))
 
 # Cluster-to-drug mapping (from Step 2 cluster profiles)
+# ADJUST to whatever cluster labels we ID
 DRUG_LABELS <- c("0" = "Kraken Candy",
                  "1" = "Triton Tabs",
                  "2" = "Coral Dust")

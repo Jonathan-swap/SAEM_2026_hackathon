@@ -23,4 +23,5 @@ mkdir -p task1_drug_identifier/out
 mkdir -p task2_disposition/out
 
 # ---- R packages ----
+R -e "install.packages(c('shiny', 'here'), repos='https://cloud.r-project.org')"
 echo "Setup complete."
