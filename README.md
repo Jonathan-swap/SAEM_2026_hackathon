@@ -57,6 +57,14 @@ R -e "install.packages(c('shiny','here'), repos='https://cloud.r-project.org')"
 
 Place hackathon data in the `data/` folder. See `data/README.md`.
 
+## Validation Scripts
+
+Two diagnostic scripts that justify methodology choices. Not part of the main pipeline — run independently.
+
+**`task1_drug_identifier/scripts/cluster_validation.py`** — Validates the K=3 KMeans clustering with four checks: validity metrics across K=2..6, stability across 30 random seeds, per-feature ANOVA F-statistics with top-N reclustering, and hierarchical clustering as a sanity check. Result: clusters are stable (mean pairwise ARI 0.967) and driven by clinically meaningful features (temp, anion gap, HR, GCS, agitation). Kept the current 29-feature setup.
+
+**`task2_disposition/scripts/feature_pruning.py`** — Compares disposition model performance after dropping low-importance features at thresholds 0.001, 0.005, and 0.01 (same GB params as the tuned baseline). Result: 0.005 threshold won — accuracy 0.836 (up from 0.825), ICU recall preserved at 0.857, 22 features instead of 49. Now baked into `disposition_prediction.py`.
+
 ## Running the Pipeline
 
 Run in order and from the main repo folder space as the pathing for all files are relative from the main repo space. Each step depends on the previous one's output:

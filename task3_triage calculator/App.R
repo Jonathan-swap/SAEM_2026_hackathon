@@ -14,8 +14,8 @@ scaling <- read.csv(file.path(TASK1_OUT, "feature_scaling.csv"))
 # Cluster-to-drug mapping (from Step 2 cluster profiles)
 # ADJUST to whatever cluster labels we ID
 DRUG_LABELS <- c("0" = "Kraken Candy",
-                 "1" = "Triton Tabs",
-                 "2" = "Coral Dust")
+                 "1" = "Coral Dust",
+                 "2" = "Triton Tabs")
 
 # Predict drug probabilities given a named vector of raw vitals
 predict_drug <- function(vitals) {

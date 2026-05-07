@@ -16,8 +16,8 @@ from sklearn.preprocessing import StandardScaler
 
 
 # ---- 1. Load data + cluster labels from Step 2 ----
-DATA_PATH = "/data/Hackathon_Data_Release_1_SHARE.xlsx"
-OUT_DIR = "/task1_drug_identifier/out"
+DATA_PATH = "data/Hackathon_Data_Release_1_SHARE.xlsx"
+OUT_DIR = "task1_drug_identifier/out"
 
 triage = pd.read_excel(DATA_PATH, sheet_name="Triage_Data")
 clusters = pd.read_csv(f"{OUT_DIR}/cluster_labels.csv")

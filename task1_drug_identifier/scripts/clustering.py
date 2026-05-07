@@ -14,15 +14,15 @@ from sklearn.preprocessing import StandardScaler
 
 
 # ---- 1. Load data + festival flags from Step 1 ----
-DATA_PATH = "/data/Hackathon_Data_Release_1_SHARE.xlsx"
-OUT_DIR = "/task1_drug_identifier/out"
+DATA_PATH = "data/Hackathon_Data_Release_1_SHARE.xlsx"
+OUT_DIR = "task1_drug_identifier/out"
 
 triage = pd.read_excel(DATA_PATH, sheet_name="Triage_Data")
 four_hour = pd.read_excel(DATA_PATH, sheet_name="Four_Hour_Data")
 flags = pd.read_csv(f"{OUT_DIR}/festival_flags.csv")
 
 # Keep only festival patients
-festival_ids = flags.loc[flags["is_festival"], "encounter_id"]
+festival_ids = flags.loc[flags["is_festival"] == 1, "encounter_id"]
 triage = triage[triage["encounter_id"].isin(festival_ids)].copy()
 four_hour = four_hour[four_hour["encounter_id"].isin(festival_ids)].copy()
 
@@ -36,6 +36,7 @@ vitals_cols = [
     "triage_snapshot.systolic_bp",
     "triage_snapshot.diastolic_bp",
     "triage_snapshot.oxygen_saturation",
+    "triage_supplemental_oxygen",
     "triage_temperature_c",
     "triage_gcs",
     "triage_pain_scale",

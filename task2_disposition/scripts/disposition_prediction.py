@@ -1,6 +1,8 @@
 """
 SAEM26 Hackathon — Task 2 disposition prediction.
 Tuned gradient boosting on triage + 4-hour features for festival patients.
+Final model uses feature pruning at importance >= 0.005
+(see feature_pruning.py for the threshold comparison that justifies this).
 """
 
 import ast
@@ -31,9 +33,10 @@ def fpr_fnr_table(y_true, y_pred, class_names):
 
 
 # ---- Paths ----
-DATA_PATH = "/data/Hackathon_Data_Release_1_SHARE.xlsx"
-TASK1_OUT = "/task1_drug_identifier/out"
-OUT_DIR   = "/task2_disposition/out"
+DATA_PATH = "data/Hackathon_Data_Release_1_SHARE.xlsx"
+TASK1_OUT = "task1_drug_identifier/out"
+OUT_DIR   = "task2_disposition/out"
+PRUNE_THRESHOLD = 0.005   # drop features with importance below this in the final model
 
 
 # ---- Load data, keep festival patients only ----
@@ -62,6 +65,7 @@ fourhr_vitals = [
     "ed_course_reassessment_4h.systolic_bp_4h",
     "ed_course_reassessment_4h.diastolic_bp_4h",
     "ed_course_reassessment_4h.oxygen_saturation_4h",
+    "ed_course_reassessment_4h.supplemental_oxygen_4h",
     "ed_course_reassessment_4h.temperature_c_4h",
     "ed_course_reassessment_4h.gcs_4h",
     "ed_course_reassessment_4h.end_tidal_co2_4h",
@@ -82,6 +86,26 @@ labs = triage["triage.labs"].apply(parse_labs).apply(pd.Series)
 labs["encounter_id"] = triage["encounter_id"].values
 labs = labs[["encounter_id"] + lab_cols]
 
+# Triage extras: ESI, supplemental O2, PMH flags, chief complaint (one-hot)
+pmh_cols = ["triage_mh_psych", "triage_mh_cardiac", "triage_mh_pulm",
+            "triage_mh_renal", "triage_mh_substance_use"]
+triage_extras = triage[["encounter_id", "triage_esi",
+                        "triage_supplemental_oxygen"] + pmh_cols].copy()
+chief_complaint = pd.get_dummies(
+    triage[["encounter_id", "triage_chief_complaint"]],
+    columns=["triage_chief_complaint"], drop_first=True,
+)
+
+# Additional labs drawn flag: 1 if any 4h scalar lab has a value, else 0.
+extra_labs = ["ed_course_reassessment_4h.lactate_4h",
+              "ed_course_reassessment_4h.cpk_4h",
+              "ed_course_reassessment_4h.vbg_ph_4h",
+              "ed_course_reassessment_4h.troponin_4h"]
+additional_labs = pd.DataFrame({
+    "encounter_id": four_hour["encounter_id"].values,
+    "additional_labs_drawn": four_hour[extra_labs].notna().any(axis=1).astype(int).values,
+})
+
 demo = pd.get_dummies(
     triage[["encounter_id", "triage_age", "triage_sex_gender"]],
     columns=["triage_sex_gender"], drop_first=True,
@@ -95,6 +119,9 @@ features = (
     triage[["encounter_id"] + triage_vitals]
     .merge(four_hour[["encounter_id"] + fourhr_vitals], on="encounter_id")
     .merge(labs, on="encounter_id")
+    .merge(triage_extras, on="encounter_id")
+    .merge(chief_complaint, on="encounter_id")
+    .merge(additional_labs, on="encounter_id")
     .merge(demo, on="encounter_id")
     .merge(cluster_features, on="encounter_id")
 )
@@ -128,7 +155,7 @@ coef_compare["abs_diff"] = (
 ).abs().round(3)
 
 
-# ---- Grid search on gradient boosting, optimizing ICU F1 ----
+# ---- Grid search on gradient boosting (full features), optimizing ICU F1 ----
 icu_f1 = make_scorer(f1_score, labels=[2], average="macro")
 param_grid = {
     "n_estimators":  [100, 150, 200],
@@ -139,12 +166,29 @@ grid = GridSearchCV(
     GradientBoostingClassifier(random_state=42),
     param_grid=param_grid, scoring=icu_f1, cv=cv, n_jobs=-1,
 ).fit(X, y)
-print(f"Best ICU F1: {grid.best_score_:.3f}  params: {grid.best_params_}")
+print(f"Best ICU F1 (full features): {grid.best_score_:.3f}  params: {grid.best_params_}")
 
 
-# ---- Final metrics on tuned model ----
+# ---- Feature importance from the tuned full-feature model ----
+importances = pd.DataFrame({
+    "feature": feature_cols,
+    "importance": grid.best_estimator_.feature_importances_,
+}).sort_values("importance", ascending=False).reset_index(drop=True)
+
+
+# ---- Prune low-importance features and re-fit with same best params ----
+kept = importances.loc[importances["importance"] >= PRUNE_THRESHOLD, "feature"].tolist()
+dropped = [f for f in feature_cols if f not in kept]
+print(f"\nPruning at {PRUNE_THRESHOLD}: keeping {len(kept)} features, dropping {len(dropped)}")
+
+X_pruned = X[kept]
+final_model = GradientBoostingClassifier(**grid.best_params_, random_state=42)
+final_model.fit(X_pruned, y)
+
+
+# ---- Final metrics on the pruned model ----
 class_names = ["Discharge", "Floor", "ICU"]
-preds = cross_val_predict(grid.best_estimator_, X, y, cv=cv)
+preds = cross_val_predict(final_model, X_pruned, y, cv=cv)
 
 print("\n" + classification_report(y, preds, target_names=class_names, digits=3))
 print("Confusion matrix:")
@@ -154,9 +198,11 @@ print("\n" + fpr_fnr_table(y, preds, class_names).to_string(index=False))
 
 # ---- Save ----
 coef_compare.to_csv(f"{OUT_DIR}/proportional_odds_check.txt", sep="\t", index=False)
+importances.to_csv(f"{OUT_DIR}/feature_importance.txt", sep="\t", index=False)
 pd.DataFrame(grid.cv_results_)[
     ["params", "mean_test_score", "std_test_score", "rank_test_score"]
 ].sort_values("rank_test_score").to_csv(
     f"{OUT_DIR}/gb_grid_search_results.txt", sep="\t", index=False,
 )
+pd.Series(kept, name="feature").to_csv(f"{OUT_DIR}/final_feature_list.txt", index=False)
 print(f"\nSaved to {OUT_DIR}/")
