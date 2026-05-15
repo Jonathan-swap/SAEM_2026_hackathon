@@ -228,6 +228,7 @@ __marimo__/
 data/*.xlsx
 data/*.csv
 data/*.docx
+data/*.txt
 
 # Generated outputs (regenerate from scripts)
 task1_drug_identifier/out/
