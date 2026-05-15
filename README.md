@@ -1,100 +1,107 @@
 # SAEM_2026_hackathon
-This is the public repository for the UVA x Stanford x University of Washington team in the SAEM 2026 hackathon. It is broken into the 3 tasks: 1) identifying festival-goers and clustering drug types 2) prediction of disposition using data available during triage (first 4 hours) 3) a calculator to predict the probability of each drug.
 
+Public repo for the UVA × Stanford × University of Washington team in the SAEM 2026 hackathon.
 
-# SAEM26 Hackathon — Festival Drug Triage
+## The challenge
 
-Pipeline for the SAEM26 Hackathon challenge: identify which festival drug a patient took from triage data, predict their disposition (Discharge / Floor / ICU), and provide a clinician-facing triage calculator.
+A fictional ED is overwhelmed during the "Soaking Man" music festival. Patients arrive having taken one of three unknown drugs (Kraken Candy, Triton Tabs, Coral Dust) that standard tox screens don't detect. We build three things:
 
-## Overview
+1. **Identify festival drug overdoses and which drug they took** — from triage data only
+2. **Predict disposition and severity** — using triage + 4-hour data
+3. **A Shiny triage calculator** — for clinicians at the bedside
 
-Three connected tasks:
+Task 1 (drug identification) is broken into three sequential steps:
+- **Step 0** — Data prep: build the feature matrix
+- **Step 1** — Drug vs. no-drug (binary classifier)
+- **Step 2** — Which drug: Kraken / Triton / Coral (multiclass classifier)
 
-1. **Drug identification at triage** — Cluster festival patients by physiology, then train a classifier on triage vitals to predict the drug.
-2. **Disposition prediction** — Predict Discharge / Floor / ICU for festival patients using triage + 4-hour data.
-3. **Rapid triage calculator** — A Shiny app where nurses enter vitals once and see both the predicted drug and a copy-paste vitals summary for the EMR.
-
-## Repo Structure
+## Repo structure
 
 ```
-hackathon/
-├── data/                          # Dataset (not committed — see data/README.md)
+SAEM_2026_hackathon/
+├── data/                              # dataset goes here (gitignored)
 ├── task1_drug_identifier/
-│   ├── scripts/
-│   │   ├── festival_flag.py       # Step 1 — flag festival vs. non-festival patients
-│   │   ├── clustering.py          # Step 2 — cluster festival patients into 3 drug groups
-│   │   └── drug_classifier.py          # Step 3 — train logistic regression on triage vitals
-│   └── out/                       # Generated outputs (not committed)
+│   └── scripts/
+│       ├── step0_data_prep.py
+│       ├── step1_drug_nodrug.py
+│       └── step2_which_drug.py
 ├── task2_disposition/
-│   ├── scripts/
-│   │   └── disposition.py         # Tuned gradient boosting for disposition prediction
-│   └── out/                       # Generated outputs (not committed)
-├── task3_triage_calculator/
-│   └── app.R                      # Shiny calculator app
-├── requirements.txt               # Python dependencies
-├── setup.sh                       # setup script
+│   └── scripts/
+│       ├── disposition_prediction.py
+│       └── feature_pruning.py
+├── task3_triage calculator/
+│   └── App.R
+├── requirements.txt
+├── setup.sh
 └── README.md
 ```
 
 ## Setup
 
-Run the setup.sh script once after cloning. It creates a Python virtual environment, installs dependencies, and creates the output folders the pipeline writes to.
+One-time, after cloning:
 
-```bash 
-chmod +x setup.sh   # one-time, makes the script executable
-./setup.sh
-```
-
-Then activate the virtual environment in your shell:
 ```bash
+chmod +x setup.sh
+./setup.sh
 source .venv/bin/activate
 ```
 
-Run this command in the terminal to install shiny and here for the R app:
+For the R app:
+
 ```bash
 R -e "install.packages(c('shiny','here'), repos='https://cloud.r-project.org')"
 ```
 
-Place hackathon data in the `data/` folder. See `data/README.md`.
+Place the hackathon data in `data/` (see `data/README.md`).
 
-## Validation Scripts
+## Running the pipeline
 
-Two diagnostic scripts that justify methodology choices. Not part of the main pipeline — run independently.
-
-**`task1_drug_identifier/scripts/cluster_validation.py`** — Validates the K=3 KMeans clustering with four checks: validity metrics across K=2..6, stability across 30 random seeds, per-feature ANOVA F-statistics with top-N reclustering, and hierarchical clustering as a sanity check. Result: clusters are stable (mean pairwise ARI 0.967) and driven by clinically meaningful features (temp, anion gap, HR, GCS, agitation). Kept the current 29-feature setup.
-
-**`task2_disposition/scripts/feature_pruning.py`** — Compares disposition model performance after dropping low-importance features at thresholds 0.001, 0.005, and 0.01 (same GB params as the tuned baseline). Result: 0.005 threshold won — accuracy 0.836 (up from 0.825), ICU recall preserved at 0.857, 22 features instead of 49. Now baked into `disposition_prediction.py`.
-
-## Running the Pipeline
-
-Run in order and from the main repo folder space as the pathing for all files are relative from the main repo space. Each step depends on the previous one's output:
+Run from the repo root. Steps within Task 1 build on each other.
 
 ```bash
-# Task 1
-python task1_drug_identifier/scripts/festival_flag.py
-python task1_drug_identifier/scripts/clustering.py
-python task1_drug_identifier/scripts/drug_classifier.py
+# Task 1 — drug identification
+python task1_drug_identifier/scripts/step0_data_prep.py
+python task1_drug_identifier/scripts/step1_drug_nodrug.py
+python task1_drug_identifier/scripts/step2_which_drug.py
 
-# Task 2
-python task2_disposition/scripts/disposition.py
+# Task 2 — disposition + severity
+python task2_disposition/scripts/disposition_prediction.py
 
 # Task 3 — Shiny calculator
-R -e "shiny::runApp('task3_triage_calculator/app.R')"
+R -e "shiny::runApp('task3_triage calculator/App.R')"
 ```
 
-The Shiny app reads `model_coefficients.csv`, `feature_scaling.csv`, and `feature_bounds.csv` from `task1_drug_identifier/out/`, so Task 1's classifier must be run first.
+## What each file does
 
-## Methodology Highlights
+### Task 1 — Drug identification
 
-- **Task 1** uses unsupervised clustering because the dataset has no drug labels. Clusters are mapped to Kraken / Triton / Coral by physiologic signature.
-- **Task 2** uses gradient boosting after ordinal logistic regression's proportional-odds assumption failed (cutpoint correlation 0.59). Intervention flags are excluded to avoid target leakage.
-- **Task 3** embeds the Task 1 logistic regression coefficients directly into Shiny, so the app needs no backend.
+**`step0_data_prep.py`** — Loads the triage data and Yohan's ground-truth labels file. Builds a triage-only feature matrix: 8 vital signs, 6 lab values (split out from the dict column), an `onset_minutes` feature extracted from the brief note, and one-hot chief complaint. Validates Yohan's hypothesis that drug patients have an onset time recorded. Also runs exploratory K-means on the drug patients (just for inspection — clustering isn't part of the prediction pipeline anymore).
 
-## Day-of Adaptation
+**`step1_drug_nodrug.py`** — Predicts drug vs. no-drug. Trains random forest, gradient boosting, and logistic regression side by side. 10-fold stratified cross-validation. Reports accuracy, precision, recall, F1, ROC-AUC, and PR-AUC. Yohan's benchmark is ~90% accuracy.
 
-The pipeline is built to handle the in-person twist:
-- Class counts and hyperparameters are not hard-coded
-- Each task lives in its own folder with separate train/predict logic
-- The Shiny app reads model bounds from a CSV that regenerates with each retrain
+**`step2_which_drug.py`** — Predicts which drug (1=Kraken / 2=Triton / 3=Coral) on drug patients only. Random forest, 10-fold CV. Reports per-class metrics, the confusion matrix, and top features. Triton vs. Coral is the hardest pair to separate.
 
-To retrain on new data: drop the new file in `data/` and re-run the pipeline above.
+### Task 2 — Disposition + severity
+
+**`disposition_prediction.py`** — Trains two parallel gradient boosting models on the same feature matrix (drug patients only): one predicts disposition (Discharge / Floor / ICU), the other predicts severity (1=low / 2=moderate / 3=high). Grid search for hyperparameters, importance-based feature pruning at threshold 0.005, 10-fold CV. Each model optimizes F1 on its most critical class (ICU for disposition, High for severity).
+
+**`feature_pruning.py`** — Companion experiment that justified the 0.005 pruning threshold for the disposition model. Compares model performance after dropping features below thresholds 0.001, 0.005, and 0.01.
+
+### Task 3 — Triage calculator
+
+**`App.R`** — Shiny app where a clinician enters triage vitals and gets predicted drug probabilities. Designed to embed the trained model coefficients directly so no Python backend is needed at runtime.
+
+## Methodology notes
+
+- **Ground-truth labels** come from Yohan's `ground_truth_labels_v4.csv`, derived from the 4-hour MDM flag. Used for training only — the deployed model only uses triage-time features.
+- **Why these models:** Random forest for the supervised classifiers (Yohan's recommendation; handles mixed feature types well on small N). Gradient boosting for disposition + severity (won out over ordinal logistic regression after the proportional-odds assumption failed). Logistic regression compared throughout for interpretability.
+- **Why supervised, not clustering, for Task 1:** Earlier work showed unsupervised clusters don't track drug identity (ARI ≈ 0 against ground truth). With labels available, supervised models are the cleaner approach. Clustering remains in `step0_data_prep.py` only for exploratory inspection.
+- **Onset time** is used as a regular feature, not as a cohort rule. 72% of drug patients and 84% of no-drug patients have it recorded, so it's not a label proxy.
+
+## Day-of adaptation plan
+
+1. Drop the new dataset into `data/`
+2. Re-run Task 1 (step 0 → step 1 → step 2)
+3. Re-run Task 2 (disposition + severity)
+4. Shiny app picks up new coefficients
+5. Update slides with new performance numbers
