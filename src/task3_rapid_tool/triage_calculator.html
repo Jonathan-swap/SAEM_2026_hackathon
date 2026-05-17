@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SAEM26 — Soaking Man Triage Calculator</title>
+<style>
+  :root {
+    --bg: #f8f9fa;
+    --card: #ffffff;
+    --ink: #1a202c;
+    --muted: #4a5568;
+    --line: #cbd5e0;
+    --accent: #2b6cb0;
+    --kraken: #c53030;
+    --triton: #2c5282;
+    --coral:  #b7791f;
+    --none:   #2f855a;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+                 sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    margin: 0;
+    padding: 1.5rem;
+    line-height: 1.45;
+  }
+  header {
+    max-width: 1100px;
+    margin: 0 auto 1rem auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+  }
+  header h1 {
+    margin: 0;
+    font-size: 1.4rem;
+    color: var(--accent);
+  }
+  header .subtitle { color: var(--muted); font-size: 0.85rem; }
+  .container {
+    max-width: 1100px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 1rem 1.25rem;
+  }
+  .card h2 {
+    margin: 0 0 0.75rem 0;
+    font-size: 1.05rem;
+    color: var(--accent);
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 0.35rem;
+  }
+  .row {
+    display: grid;
+    grid-template-columns: 1.4fr 1fr 0.8fr;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+    align-items: center;
+  }
+  .row label { font-size: 0.9rem; color: var(--muted); }
+  .row input, .row select {
+    width: 100%;
+    padding: 0.3rem 0.4rem;
+    font-size: 0.92rem;
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    background: #fff;
+  }
+  .row .unit { font-size: 0.78rem; color: var(--muted); }
+  .flag-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem 0.75rem;
+    margin-top: 0.3rem;
+  }
+  .flag-row label {
+    font-size: 0.85rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    color: var(--muted);
+  }
+  .results {
+    grid-column: 1 / -1;
+    background: var(--card);
+    border: 2px solid var(--accent);
+    border-radius: 6px;
+    padding: 1rem 1.25rem;
+  }
+  .results h2 {
+    margin: 0 0 0.5rem 0;
+    color: var(--accent);
+    font-size: 1.1rem;
+  }
+  .probs {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.5rem;
+  }
+  .prob-card {
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 0.5rem 0.6rem;
+    text-align: center;
+  }
+  .prob-card .name { font-weight: 600; font-size: 0.95rem; }
+  .prob-card .pct {
+    font-size: 1.7rem;
+    font-weight: 700;
+    margin: 0.15rem 0;
+  }
+  .prob-card .bar {
+    height: 6px; border-radius: 3px; background: #edf2f7; overflow: hidden;
+  }
+  .prob-card .bar > div { height: 100%; }
+  .kraken { border-color: var(--kraken); }
+  .kraken .pct, .kraken .name { color: var(--kraken); }
+  .kraken .bar > div { background: var(--kraken); }
+  .triton { border-color: var(--triton); }
+  .triton .pct, .triton .name { color: var(--triton); }
+  .triton .bar > div { background: var(--triton); }
+  .coral  { border-color: var(--coral); }
+  .coral  .pct, .coral  .name { color: var(--coral); }
+  .coral  .bar > div { background: var(--coral); }
+  .none   { border-color: var(--none); }
+  .none   .pct, .none   .name { color: var(--none); }
+  .none   .bar > div { background: var(--none); }
+  .top {
+    margin-top: 0.6rem;
+    padding: 0.55rem 0.8rem;
+    border-radius: 4px;
+    font-size: 1rem;
+    background: #edf2f7;
+  }
+  .top.kraken-bg { background: #fed7d7; border-left: 4px solid var(--kraken); }
+  .top.triton-bg { background: #bee3f8; border-left: 4px solid var(--triton); }
+  .top.coral-bg  { background: #feebc8; border-left: 4px solid var(--coral); }
+  .top.none-bg   { background: #c6f6d5; border-left: 4px solid var(--none); }
+  .reasoning {
+    font-size: 0.8rem;
+    color: var(--muted);
+    margin-top: 0.4rem;
+    line-height: 1.4;
+  }
+  .reasoning code { background: #edf2f7; padding: 0 0.25rem; border-radius: 3px; }
+  .actions {
+    grid-column: 1 / -1;
+    display: flex;
+    gap: 0.5rem;
+    justify-content: flex-end;
+  }
+  button {
+    padding: 0.45rem 1rem;
+    font-size: 0.9rem;
+    border: 1px solid var(--line);
+    background: var(--card);
+    color: var(--ink);
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  button.primary { background: var(--accent); color: white; border-color: var(--accent); }
+  .footer {
+    max-width: 1100px;
+    margin: 1rem auto 0 auto;
+    font-size: 0.75rem;
+    color: var(--muted);
+  }
+  @media print {
+    body { background: white; padding: 1rem; }
+    .actions { display: none; }
+    header h1 { color: black; }
+    .results { border-color: black; }
+    .prob-card { border-color: #555; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>SAEM26 — Soaking Man Festival Triage Calculator</h1>
+  <div class="subtitle">Single-page · offline · printable · v1.0</div>
+</header>
+
+<form id="form" class="container" onsubmit="event.preventDefault(); calculate();">
+
+  <!-- VITAL SIGNS -->
+  <div class="card">
+    <h2>Vital signs at triage</h2>
+    <div class="row"><label>Heart rate</label><input type="number" id="hr" value="100" step="1"><span class="unit">bpm</span></div>
+    <div class="row"><label>Respiratory rate</label><input type="number" id="rr" value="20" step="1"><span class="unit">/min</span></div>
+    <div class="row"><label>Systolic BP</label><input type="number" id="sbp" value="120" step="1"><span class="unit">mmHg</span></div>
+    <div class="row"><label>Diastolic BP</label><input type="number" id="dbp" value="75" step="1"><span class="unit">mmHg</span></div>
+    <div class="row"><label>SpO2</label><input type="number" id="spo2" value="96" step="0.1"><span class="unit">%</span></div>
+    <div class="row"><label>Temperature</label><input type="number" id="temp" value="37.3" step="0.1"><span class="unit">°C</span></div>
+    <div class="row"><label>GCS</label><input type="number" id="gcs" value="15" step="1" min="3" max="15"><span class="unit">3–15</span></div>
+    <div class="row"><label>Supplemental O2</label>
+      <select id="supp_o2"><option value="0">No</option><option value="1">Yes</option></select>
+      <span class="unit"></span>
+    </div>
+  </div>
+
+  <!-- DEMOGRAPHICS + CONTEXT -->
+  <div class="card">
+    <h2>Patient context</h2>
+    <div class="row"><label>Age</label><input type="number" id="age" value="28" step="1" min="0" max="110"><span class="unit">years</span></div>
+    <div class="row"><label>Festival attendee</label>
+      <select id="festival"><option value="1">Yes</option><option value="0">No</option></select>
+      <span class="unit"></span>
+    </div>
+    <div class="row"><label>Mode of arrival</label>
+      <select id="arrival">
+        <option value="walkin">Walk-in</option>
+        <option value="ems">EMS</option>
+        <option value="medtent">Festival Medical Tent Transfer</option>
+        <option value="police">Police</option>
+      </select>
+      <span class="unit"></span>
+    </div>
+    <div class="row"><label>Chief complaint</label>
+      <select id="cc">
+        <option value="ams">Altered mental status</option>
+        <option value="agitation">Agitation</option>
+        <option value="palpitations">Palpitations</option>
+        <option value="anxiety">Anxiety / panic</option>
+        <option value="chestpain">Chest pain</option>
+        <option value="nausea">Nausea / vomiting</option>
+        <option value="headache">Headache</option>
+        <option value="weakness">General weakness</option>
+        <option value="syncope">Syncope</option>
+        <option value="sob">Shortness of breath</option>
+        <option value="other">Other</option>
+      </select>
+      <span class="unit"></span>
+    </div>
+    <div class="row"><label>Symptom onset before arrival</label>
+      <input type="number" id="onset" value="120" step="5" min="0" max="600"><span class="unit">min (blank if unknown)</span>
+    </div>
+    <div class="row"><label>Triage ESI</label>
+      <select id="esi"><option value="1">1 (most acute)</option><option value="2">2</option><option value="3" selected>3</option><option value="4">4</option><option value="5">5 (least)</option></select>
+      <span class="unit"></span>
+    </div>
+
+    <h2 style="margin-top: 0.75rem;">Triage exam findings</h2>
+    <div class="flag-row">
+      <label><input type="checkbox" id="flag_diaphoretic"> Diaphoretic</label>
+      <label><input type="checkbox" id="flag_agitated"> Agitated</label>
+      <label><input type="checkbox" id="flag_tremor"> Tremor</label>
+      <label><input type="checkbox" id="flag_mydriasis"> Mydriasis</label>
+      <label><input type="checkbox" id="flag_miosis"> Miosis</label>
+      <label><input type="checkbox" id="flag_ataxia"> Ataxia / unsteady gait</label>
+      <label><input type="checkbox" id="flag_drymucosa"> Dry mucosa</label>
+      <label><input type="checkbox" id="flag_perceptual"> Perceptual changes</label>
+      <label><input type="checkbox" id="flag_slow"> Slow responses / reduced tracking</label>
+      <label><input type="checkbox" id="flag_specific_dx"> Specific non-festival dx suspected</label>
+    </div>
+  </div>
+
+  <!-- POINT-OF-CARE LABS (optional) -->
+  <div class="card" style="grid-column: 1 / -1;">
+    <h2>iStat point-of-care labs (optional — leave blank if not drawn)</h2>
+    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.4rem 1rem;">
+      <div class="row"><label>Fingerstick glucose</label><input type="number" id="gluc" step="1"><span class="unit">mg/dL</span></div>
+      <div class="row"><label>pH</label><input type="number" id="ph" step="0.01"><span class="unit"></span></div>
+      <div class="row"><label>Sodium</label><input type="number" id="na" step="1"><span class="unit">mEq/L</span></div>
+      <div class="row"><label>Potassium</label><input type="number" id="k" step="0.1"><span class="unit">mEq/L</span></div>
+      <div class="row"><label>Hemoglobin</label><input type="number" id="hgb" step="0.1"><span class="unit">g/dL</span></div>
+      <div class="row"><label>Anion gap</label><input type="number" id="ag" step="1"><span class="unit"></span></div>
+    </div>
+  </div>
+
+  <!-- ACTIONS -->
+  <div class="actions">
+    <button type="button" onclick="reset()">Reset</button>
+    <button type="button" onclick="window.print()">Print</button>
+    <button type="submit" class="primary">Calculate</button>
+  </div>
+
+  <!-- RESULTS -->
+  <div class="results" id="results">
+    <h2>Predicted drug class</h2>
+    <div class="probs">
+      <div class="prob-card kraken">
+        <div class="name">Kraken Candy</div>
+        <div class="pct" id="pct-kraken">25%</div>
+        <div class="bar"><div id="bar-kraken" style="width:25%"></div></div>
+        <div class="reasoning">Sympathomimetic</div>
+      </div>
+      <div class="prob-card triton">
+        <div class="name">Triton Tabs</div>
+        <div class="pct" id="pct-triton">25%</div>
+        <div class="bar"><div id="bar-triton" style="width:25%"></div></div>
+        <div class="reasoning">Sedative-hypnotic</div>
+      </div>
+      <div class="prob-card coral">
+        <div class="name">Coral Dust</div>
+        <div class="pct" id="pct-coral">25%</div>
+        <div class="bar"><div id="bar-coral" style="width:25%"></div></div>
+        <div class="reasoning">Hallucinogenic</div>
+      </div>
+      <div class="prob-card none">
+        <div class="name">None</div>
+        <div class="pct" id="pct-none">25%</div>
+        <div class="bar"><div id="bar-none" style="width:25%"></div></div>
+        <div class="reasoning">Typical pathology</div>
+      </div>
+    </div>
+    <div class="top" id="top">Enter values and click Calculate.</div>
+    <div class="reasoning" id="reasoning"></div>
+  </div>
+</form>
+
+<div class="footer">
+  Scoring informed by feature importance from the trained Task-1 RF
+  (top features: HR, RR, anion gap, glucose, temperature, pH, GCS,
+  onset minutes, festival flag) and canonical toxidrome reasoning.
+  Predicted probabilities are approximate and intended as a
+  triage-decision aid, not a diagnostic test.
+</div>
+
+<script>
+"use strict";
+
+// ===== Scoring =====
+// Each class accumulates points. The first iteration converts the
+// triage inputs into an additive evidence score per class; the
+// second iteration softmaxes the scores into probabilities.
+
+function num(id) {
+  const el = document.getElementById(id);
+  if (!el) return null;
+  if (el.value === "" || el.value === null) return null;
+  const v = parseFloat(el.value);
+  return Number.isFinite(v) ? v : null;
+}
+function bool(id) { return !!document.getElementById(id).checked; }
+function sel(id)  { return document.getElementById(id).value; }
+
+function score() {
+  // Initialize prior bias: roughly tracks the training-set argmax
+  // distribution (Kraken 61% / Coral 16% / Triton 12% / None 11%).
+  // Logit-space contributions stack on top.
+  let s = { kraken: 0.0, triton: 0.0, coral: 0.0, none: 0.0 };
+  const reasons = [];
+
+  // ----- Context: festival flag -----
+  const festival = sel("festival") === "1";
+  if (!festival) {
+    s.none += 2.5;
+    reasons.push("Non-festival patient → strong evidence for None.");
+  } else {
+    // Mild prior boost for any drug class
+    s.kraken += 0.3; s.triton += 0.3; s.coral += 0.3;
+  }
+  if (sel("arrival") === "medtent" && festival) {
+    s.kraken += 0.3; s.coral += 0.2;
+    reasons.push("Festival medical-tent transfer → likely tox.");
+  }
+
+  // ----- Specific non-festival diagnosis suspected -----
+  if (bool("flag_specific_dx")) {
+    s.none += 2.0;
+    reasons.push("Specific non-festival dx suspected → None boosted.");
+  }
+
+  // ----- Heart rate -----
+  const hr = num("hr");
+  if (hr !== null) {
+    if (hr >= 130) { s.kraken += 1.4; reasons.push(`HR ${hr} ≥130: marked tachycardia → Kraken.`); }
+    else if (hr >= 110) { s.kraken += 0.8; s.coral += 0.3; reasons.push(`HR ${hr} ≥110: tachycardia.`); }
+    else if (hr >= 100) { s.kraken += 0.3; s.coral += 0.2; }
+    else if (hr <= 50) { s.triton += 1.2; reasons.push(`HR ${hr} ≤50: bradycardia → Triton.`); }
+    else if (hr <= 60) { s.triton += 0.6; reasons.push(`HR ${hr} ≤60: relative bradycardia.`); }
+  }
+
+  // ----- Respiratory rate -----
+  const rr = num("rr");
+  if (rr !== null) {
+    if (rr >= 25) { s.kraken += 0.8; reasons.push(`RR ${rr} ≥25: tachypnea → Kraken/severe.`); }
+    else if (rr >= 22) { s.kraken += 0.4; }
+    else if (rr <= 10) { s.triton += 1.4; reasons.push(`RR ${rr} ≤10: hypoventilation → Triton.`); }
+    else if (rr <= 12) { s.triton += 0.7; reasons.push(`RR ${rr} ≤12: low respiratory rate.`); }
+  }
+
+  // ----- Blood pressure -----
+  const sbp = num("sbp");
+  if (sbp !== null) {
+    if (sbp >= 160) { s.kraken += 0.8; reasons.push(`SBP ${sbp} ≥160 → hypertensive (sympathomimetic).`); }
+    else if (sbp >= 140) { s.kraken += 0.4; }
+    else if (sbp <= 90) { s.triton += 1.0; reasons.push(`SBP ${sbp} ≤90 → hypotension (sedative).`); }
+    else if (sbp <= 100) { s.triton += 0.5; }
+  }
+
+  // ----- SpO2 -----
+  const spo2 = num("spo2");
+  if (spo2 !== null) {
+    if (spo2 <= 91) { s.triton += 1.0; reasons.push(`SpO2 ${spo2}% ≤91 → severe desat.`); }
+    else if (spo2 <= 94) { s.triton += 0.4; }
+  }
+  if (sel("supp_o2") === "1") { s.triton += 0.5; reasons.push("On supplemental O2."); }
+
+  // ----- Temperature -----
+  const temp = num("temp");
+  if (temp !== null) {
+    if (temp >= 39.0) { s.kraken += 1.4; reasons.push(`Temp ${temp}°C ≥39 → hyperthermia (Kraken).`); }
+    else if (temp >= 38.1) { s.kraken += 0.8; reasons.push(`Temp ${temp}°C febrile.`); }
+    else if (temp <= 35.5) { s.triton += 0.7; reasons.push(`Temp ${temp}°C low → sedative effect.`); }
+  }
+
+  // ----- GCS -----
+  const gcs = num("gcs");
+  if (gcs !== null) {
+    if (gcs <= 8)  { s.triton += 1.8; reasons.push(`GCS ${gcs} ≤8 → severe CNS depression (Triton).`); }
+    else if (gcs <= 12) { s.triton += 1.0; reasons.push(`GCS ${gcs} ≤12 → CNS depression.`); }
+    else if (gcs <= 13) { s.triton += 0.4; }
+  }
+
+  // ----- Onset minutes -----
+  const onset = num("onset");
+  if (onset !== null) {
+    if (onset < 60) { s.kraken += 0.6; reasons.push(`Onset ${onset} min (<60): rapid → Kraken/Coral.`); }
+    else if (onset > 180) { s.triton += 0.4; reasons.push(`Onset ${onset} min (>180): delayed.`); }
+  } else if (festival) {
+    s.none += 0.4;  // unknown onset + festival = mildly less confident
+  }
+
+  // ----- Chief complaint -----
+  const cc = sel("cc");
+  if (cc === "ams") {
+    s.triton += 0.7; s.kraken += 0.3;
+    reasons.push("CC altered mental status → leans Triton.");
+  } else if (cc === "agitation") {
+    s.kraken += 1.0; s.coral += 0.3;
+    reasons.push("CC agitation → leans Kraken.");
+  } else if (cc === "palpitations") {
+    s.kraken += 0.6;
+  } else if (cc === "anxiety") {
+    s.kraken += 0.4; s.coral += 0.4;
+  } else if (cc === "chestpain") {
+    s.kraken += 0.3; s.none += 0.4;
+  } else if (cc === "headache" || cc === "weakness") {
+    s.coral += 0.3; s.none += 0.3;
+  } else if (cc === "nausea") {
+    s.coral += 0.3;
+  } else if (cc === "sob" || cc === "syncope") {
+    s.none += 0.4; s.triton += 0.2;
+  }
+
+  // ----- Exam findings -----
+  if (bool("flag_diaphoretic")) { s.kraken += 0.8; reasons.push("Diaphoretic → Kraken."); }
+  if (bool("flag_agitated"))    { s.kraken += 0.9; reasons.push("Agitated → Kraken."); }
+  if (bool("flag_tremor"))      { s.kraken += 0.6; }
+  if (bool("flag_mydriasis"))   { s.kraken += 0.5; s.coral += 0.3; }
+  if (bool("flag_miosis"))      { s.triton += 0.8; reasons.push("Miosis → Triton."); }
+  if (bool("flag_ataxia"))      { s.coral += 1.0; reasons.push("Ataxia → Coral."); }
+  if (bool("flag_drymucosa"))   { s.coral += 0.4; }
+  if (bool("flag_perceptual"))  { s.coral += 1.2; reasons.push("Perceptual changes → Coral."); }
+  if (bool("flag_slow"))        { s.triton += 1.0; reasons.push("Slow responses → Triton."); }
+
+  // ----- POC labs (optional) -----
+  const ag = num("ag");
+  if (ag !== null) {
+    if (ag >= 16) { s.kraken += 0.8; reasons.push(`Anion gap ${ag} ≥16 → metabolic acidosis (Kraken).`); }
+    else if (ag >= 12) { s.kraken += 0.3; }
+  }
+  const ph = num("ph");
+  if (ph !== null) {
+    if (ph < 7.30) { s.kraken += 0.5; reasons.push(`pH ${ph} <7.30 → acidosis.`); }
+    else if (ph > 7.45) { s.coral += 0.2; }
+  }
+  const gluc = num("gluc");
+  if (gluc !== null) {
+    if (gluc < 60) { s.triton += 0.6; reasons.push(`Glucose ${gluc} <60 → hypoglycemia.`); }
+    else if (gluc > 200) { s.kraken += 0.3; }
+  }
+  const k = num("k");
+  if (k !== null) {
+    if (k < 3.5 || k > 5.5) { s.kraken += 0.3; reasons.push(`K ${k} out of range.`); }
+  }
+  const na = num("na");
+  if (na !== null) {
+    if (na < 130 || na > 150) { s.none += 0.4; reasons.push(`Na ${na} extreme → non-festival cause?`); }
+  }
+
+  // ----- Triage ESI (high acuity → more likely a real toxidrome or specific medical) -----
+  const esi = parseInt(sel("esi"), 10);
+  if (esi <= 2) {
+    s.kraken += 0.3; s.triton += 0.3;
+    reasons.push(`ESI ${esi} (high acuity).`);
+  } else if (esi >= 4 && festival) {
+    s.coral += 0.2;
+  }
+
+  return { scores: s, reasons };
+}
+
+function softmax(scores) {
+  const T = 1.0;  // temperature
+  const xs = Object.values(scores).map(v => v / T);
+  const m = Math.max(...xs);
+  const exps = xs.map(v => Math.exp(v - m));
+  const Z = exps.reduce((a, b) => a + b, 0);
+  const ps = exps.map(v => v / Z);
+  return { kraken: ps[0], triton: ps[1], coral: ps[2], none: ps[3] };
+}
+
+function calculate() {
+  const { scores, reasons } = score();
+  const probs = softmax(scores);
+  const order = Object.entries(probs).sort((a, b) => b[1] - a[1]);
+  const NAMES = { kraken: "Kraken Candy", triton: "Triton Tabs",
+                  coral: "Coral Dust", none: "None / typical pathology" };
+
+  for (const cls of ["kraken", "triton", "coral", "none"]) {
+    const pct = (probs[cls] * 100);
+    document.getElementById("pct-" + cls).textContent =
+      pct.toFixed(0) + "%";
+    document.getElementById("bar-" + cls).style.width = pct + "%";
+  }
+
+  const topCls = order[0][0];
+  const topPct = (order[0][1] * 100).toFixed(0);
+  const second = order[1];
+  const margin = (order[0][1] - second[1]).toFixed(2);
+  const banner = document.getElementById("top");
+  banner.className = "top " + topCls + "-bg";
+  let conf = "high confidence";
+  if (order[0][1] < 0.5) conf = "low confidence";
+  else if (order[0][1] < 0.7) conf = "moderate confidence";
+  banner.innerHTML = `<b>Most likely:</b> ${NAMES[topCls]} (${topPct}%, ${conf}).
+    Margin over ${NAMES[second[0]]}: ${margin}.`;
+
+  document.getElementById("reasoning").innerHTML =
+    "<b>Evidence:</b> " + (reasons.length
+       ? reasons.map(r => `<code>${r}</code>`).join(" ")
+       : "Default prior (no strong signal yet).");
+}
+
+function reset() {
+  document.getElementById("form").reset();
+  calculate();
+}
+
+window.addEventListener("DOMContentLoaded", calculate);
+</script>
+</body>
+</html>
