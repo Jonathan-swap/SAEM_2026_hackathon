@@ -140,16 +140,23 @@ def merge_candidates() -> None:
 
 
 def leakage_sentinel() -> None:
+    """Triage features must contain no signal that isn't observable at
+    minute 0 of arrival. Forbids time-series prefixes, 4h reassessment
+    suffixes, paired triage<->4h differentials, the Task-2 target, and
+    full-day arrival volume (only knowable after the day ends)."""
     path = DERIVED / "features_triage.csv"
     df = pd.read_csv(path)
     forbidden_prefixes = ("vts_", "lts_", "itv_", "xmod_",
                            "stab_", "arc_")
+    forbidden_exact = {"encounter_disposition_label",
+                        "arrival_same_day_volume"}
     leaked = [c for c in df.columns
               if c.startswith(forbidden_prefixes) or "_4h" in c
               or "delta_" in c or c.startswith("diff_")
               or c.startswith("abs_diff_") or c.startswith("pct_change_")
-              or c.startswith("direction_")]
-    leaked = [c for c in leaked if c not in WHITELIST]
+              or c.startswith("direction_")
+              or c in forbidden_exact]
+    leaked = [c for c in leaked if c not in WHITELIST - forbidden_exact]
     if leaked:
         raise AssertionError(
             f"Leakage in features_triage.csv: {leaked}")

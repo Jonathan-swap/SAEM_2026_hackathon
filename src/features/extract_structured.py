@@ -153,9 +153,11 @@ def main() -> None:
         note_lc.str.contains(FESTIVAL_KEYWORDS)
     ).astype(int)
 
-    # Disposition is attached for joining, but Task 1 must not use it
-    # as a feature. It IS the Task 2 target.
-    features_triage = triage_block.merge(dispo, on="encounter_id", how="left")
+    # `encounter_disposition_label` is the Task-2 target and is NOT
+    # available at triage. Excluded from features_triage to make the
+    # leakage protection structural (so naive `df.drop(["encounter_id"])`
+    # cannot accidentally feed it into a Task-1 model).
+    features_triage = triage_block
 
     triage_path = OUT / "features_triage.csv"
     features_triage.to_csv(triage_path, index=False)
@@ -216,14 +218,15 @@ def main() -> None:
           f"{(features_triage['triage_mode_of_arrival'] == 'Festival Medical Tent Transfer').sum()}")
     print(f"  via note keyword only:    "
           f"{features_triage['festival_note_keyword_hit'].sum()}")
-    print(f"\nDisposition class counts:\n"
-          f"{features_triage['encounter_disposition_label'].value_counts()}")
+    print(f"\nDisposition class counts (from features_fourh):\n"
+          f"{features_fourh['encounter_disposition_label'].value_counts()}")
 
     # ---- Leakage sentinel ----
     forbidden_in_triage = [
         c for c in features_triage.columns
         if c.startswith(("ed_course", "narrative_notes_", "narrative.notes_"))
         or "_4h" in c or "delta_" in c
+        or c == "encounter_disposition_label"
     ]
     assert not forbidden_in_triage, (
         f"Leakage: forbidden columns leaked into triage features: "
