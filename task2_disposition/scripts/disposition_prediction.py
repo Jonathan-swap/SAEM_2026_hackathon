@@ -1,8 +1,35 @@
 """
-SAEM26 Hackathon — Task 2 disposition prediction.
-Tuned gradient boosting on triage + 4-hour features for festival patients.
-Final model uses feature pruning at importance >= 0.005
-(see feature_pruning.py for the threshold comparison that justifies this).
+Task 2 — Disposition + severity (disposition_prediction.py)
+Inputs:
+
+data/Hackathon_Data_Release_1_SHARE.xlsx — Triage_Data, Four_Hour_Data, Disposition sheets
+data/tox_ground_truth_v5.csv — for cohort filter, predicted_drug one-hot feature, and severity_score target
+data/llm_features.csv (optional — same LLM CSV as step 1, merged if present)
+
+Filters to: 157 drug patients
+Features (~55+):
+
+All 24 from step 1, plus:
+12 four-hour vitals + deltas (delta_hr, delta_temp, delta_gcs)
+triage_age, sex one-hot
+5 PMH flags
+triage_esi, triage_supplemental_oxygen
+additional_labs_drawn (binary, derived from 4hr lab availability)
+2 drug one-hot columns (from v5 predicted_drug)
+~4 mode-of-arrival one-hot columns (new)
+4 HPI/MDM features (new): hpi_word_count, mdm_word_count, mdm_severity_tier (regex extracted), hpi_has_severe (binary)
+N LLM-derived features (new, optional)
+
+Two targets, trained in parallel:
+
+Disposition: 0=Discharge / 1=Floor / 2=ICU (from Disposition sheet)
+Severity: 1=Low / 2=Moderate / 3=High (from v5 severity_score) — mdm_severity_tier excluded from this target's feature set to avoid leakage
+
+Outputs:
+
+Printed only:
+
+For each target: best hyperparams from grid search, pruned feature count (importance threshold 0.005), classification report, confusion matrix, top 10 features
 """
 
 import ast

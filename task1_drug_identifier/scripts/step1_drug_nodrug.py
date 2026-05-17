@@ -1,15 +1,27 @@
 """
-Step 1 — Drug vs. no-drug binary classifier.
+Step 1 — Drug vs no-drug (step1_drug_nodrug.py)
+Inputs:
 
-Random forest, 10-fold stratified CV. Triage-only features.
+Same two files as step 0
+data/llm_features.csv (optional — Rupesh's LLM-derived features, merged if present)
+Builds its own copy of the feature matrix internally
 
-Target: bucket from Yohan's GT (drug = in GT file, else no_drug).
+Features (~28+, triage-only):
 
-Compares two feature sets:
-  - "baseline":  vitals + 6 labs + onset_minutes + chief complaint  (~24 features)
-  - "+ extras":  adds triage_age, sex, ESI, 5 PMH flags             (~34 features)
+8 vitals: HR, RR, systolic BP, diastolic BP, SpO2, temperature, GCS, pain
+6 labs (split from dict): glucose, pH, sodium, potassium, hemoglobin, anion gap
+1 onset feature: onset_minutes from brief note
+~9 chief complaint one-hot columns
+~4 mode-of-arrival one-hot columns (new)
+N LLM-derived features (new, optional — varies based on Rupesh's CSV)
 
-Benchmark: ~90% accuracy (Yohan).
+Target: binary bucket (1 if in Yohan's GT, 0 if not)
+Outputs:
+
+Printed only:
+
+10-fold CV metrics for RF, GBT, LR: accuracy, precision, recall, F1, ROC-AUC, PR-AUC
+Top 15 RF feature importances
 """
 
 import ast
@@ -24,7 +36,7 @@ from sklearn.model_selection import StratifiedKFold, cross_val_predict
 
 # ---- Config ----
 DATA_PATH = "data/Hackathon_Data_Release_1_SHARE.xlsx"
-GT_PATH   = "data/ground_truth_labels_v4.csv"
+GT_PATH   = "data/tox_ground_truth_v5.csv"
 
 ONSET_RE = re.compile(r"symptom onset\s+~?(\d+)\s+minutes?\s+before arrival",
                       re.IGNORECASE)

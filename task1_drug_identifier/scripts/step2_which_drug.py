@@ -1,13 +1,20 @@
 """
-Step 2 — Which drug (multiclass classifier).
+Step 2 — Which drug (step2_which_drug.py)
+Inputs:
 
-Random forest, 10-fold stratified CV. Drug patients only.
+Same two files as step 0
+Filters to 157 drug patients (inner join with GT)
 
-Target: drug_label from Yohan's GT (1=Kraken, 2=Triton, 3=Coral).
-Features: 8 vitals + 6 labs + onset_minutes + chief complaint one-hot.
+Features: same 24 as step 1's base (mode of arrival and LLM features not currently wired into step 2 — could be added)
+Target: multiclass predicted_drug from v5 (1=Kraken, 2=Triton, 3=Coral)
+Outputs:
 
-Deployment chain:
-  step1 flags drug -> step2 predicts which one
+Printed only:
+
+10-fold CV metrics: accuracy, macro precision/recall/F1, macro ROC-AUC, macro PR-AUC
+Per-class classification report
+Confusion matrix (Kraken/Triton/Coral)
+Top 10 feature importances
 """
 
 import ast
@@ -23,7 +30,7 @@ from sklearn.model_selection import StratifiedKFold, cross_val_predict
 
 # ---- Config ----
 DATA_PATH = "data/Hackathon_Data_Release_1_SHARE.xlsx"
-GT_PATH   = "data/ground_truth_labels_v4.csv"
+GT_PATH   = "data/tox_ground_truth_v5.csv"
 
 ONSET_RE = re.compile(r"symptom onset\s+~?(\d+)\s+minutes?\s+before arrival",
                       re.IGNORECASE)
@@ -71,11 +78,11 @@ chief = pd.get_dummies(
 data = (triage[["encounter_id", "onset_minutes"] + VITALS]
         .merge(labs,  on="encounter_id")
         .merge(chief, on="encounter_id")
-        .merge(gt[["encounter_id", "drug_label"]], on="encounter_id", how="inner"))
+        .merge(gt[["encounter_id", "predicted_drug"]], on="encounter_id", how="inner"))
 
-feature_cols = [c for c in data.columns if c not in {"encounter_id", "drug_label"}]
+feature_cols = [c for c in data.columns if c not in {"encounter_id", "predicted_drug"}]
 X = data[feature_cols].fillna(data[feature_cols].median(numeric_only=True))
-y = data["drug_label"].astype(int)
+y = data["predicted_drug"].astype(int)
 print(f"Drug patients: {len(data)}   class counts: {y.value_counts().sort_index().to_dict()}")
 
 
