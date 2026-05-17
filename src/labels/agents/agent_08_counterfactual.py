@@ -20,7 +20,7 @@ from pathlib import Path
 
 import pandas as pd
 
-ROOT = Path(__file__).resolve().parents[3] / "derived"s[3]
+ROOT = Path(__file__).resolve().parents[3]
 NARR = ROOT / "derived" / "narratives.jsonl"
 OUT = ROOT / "derived" / "probs_8.csv"
 

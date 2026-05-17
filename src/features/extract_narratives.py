@@ -13,7 +13,7 @@ from pathlib import Path
 import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[2]
-XLSX = ROOT / "SAEM_2026_hackathon" / "data" / "Hackathon_Data_Release_1_SHARE.xlsx"
+XLSX = ROOT / "data" / "Hackathon_Data_Release_1_SHARE.xlsx"
 OUT = ROOT / "derived"
 OUT.mkdir(exist_ok=True)
 

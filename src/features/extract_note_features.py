@@ -38,7 +38,7 @@ import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[2]
 DERIVED = ROOT / "derived"
-XLSX = ROOT / "SAEM_2026_hackathon" / "data" / "Hackathon_Data_Release_1_SHARE.xlsx"
+XLSX = ROOT / "data" / "Hackathon_Data_Release_1_SHARE.xlsx"
 
 ONSET_RE = re.compile(
     r"symptom onset\s*~?\s*(\d+(?:\.\d+)?)\s*min(?:ute)?s?\s*before\s*arrival",

@@ -29,7 +29,7 @@ import numpy as np
 import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[2]
-XLSX = ROOT / "SAEM_2026_hackathon" / "data" / "Hackathon_Data_Release_1_SHARE.xlsx"
+XLSX = ROOT / "data" / "Hackathon_Data_Release_1_SHARE.xlsx"
 DERIVED = ROOT / "derived"
 
 FESTIVAL_START = datetime(2025, 5, 18)

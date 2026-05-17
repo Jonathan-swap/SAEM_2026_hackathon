@@ -14,7 +14,7 @@ from pathlib import Path
 import pandas as pd
 from docx import Document
 
-DATA_DIR = Path(__file__).resolve().parents[2] / "SAEM_2026_hackathon" / "data"
+DATA_DIR = Path(__file__).resolve().parents[2] / "data"
 CODEBOOK = DATA_DIR / "Hackathon_Codebook_Release_1_SHARE.docx"
 XLSX = DATA_DIR / "Hackathon_Data_Release_1_SHARE.xlsx"
 
