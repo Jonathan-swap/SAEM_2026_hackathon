@@ -47,24 +47,31 @@ PROB_COLS = ["p_kraken", "p_triton", "p_coral", "p_none"]
 
 def load_data(use_drug_probs_as_features: bool = True
               ) -> tuple[pd.DataFrame, np.ndarray, np.ndarray]:
+    """Cohort: patients positive for a festival drug per the manual
+    ground truth (ground_truth_drug != 0). Switched 2026-05-17 from
+    LLM-consensus argmax to manual annotation."""
     X = pd.read_csv(DERIVED / "features_fourh.csv")
-    # keep_default_na=False so the string "None" survives as a value
+    gt = pd.read_csv(DERIVED / "ground_truth.csv")[
+        ["encounter_id", "ground_truth_drug", "ground_truth_drug_name"]]
     probs = pd.read_csv(DERIVED / "probs_avg.csv",
                          keep_default_na=False, na_values=[""])[
-        ["encounter_id", "argmax_class", *PROB_COLS]]
+        ["encounter_id", *PROB_COLS]]
 
-    df = X.merge(probs, on="encounter_id", how="inner")
+    df = X.merge(gt, on="encounter_id", how="inner")
+    df = df.merge(probs, on="encounter_id", how="inner")
 
-    # Cohort filter: drug-positive only (argmax != None)
+    # Cohort filter: drug-positive per manual ground truth
     n_before = len(df)
-    df = df[df["argmax_class"] != "None"].reset_index(drop=True)
-    print(f"Cohort filter (argmax != 'None'): {n_before} -> {len(df)} patients")
+    df = df[df["ground_truth_drug"] != 0].reset_index(drop=True)
+    print(f"Cohort filter (ground_truth_drug != None): "
+          f"{n_before} -> {len(df)} patients (drug-positive)")
 
     # Drop columns that should not be features
     drop = [
         "encounter_id",
         "encounter_arrival_date",
-        "argmax_class",  # categorical version of the prob columns; redundant
+        "ground_truth_drug",
+        "ground_truth_drug_name",
     ]
     # Optionally remove drug-class probs from features
     if not use_drug_probs_as_features:
@@ -270,12 +277,10 @@ def main() -> None:
         if use_drug_probs:
             ids = pd.read_csv(DERIVED / "features_fourh.csv")[
                 ["encounter_id"]]
-            argmax_class = pd.read_csv(DERIVED / "probs_avg.csv",
-                                         keep_default_na=False,
-                                         na_values=[""])[
-                ["encounter_id", "argmax_class"]]
-            ids = ids.merge(argmax_class, on="encounter_id")
-            cohort = ids[ids["argmax_class"] != "None"].reset_index(drop=True)
+            gt = pd.read_csv(DERIVED / "ground_truth.csv")[
+                ["encounter_id", "ground_truth_drug"]]
+            ids = ids.merge(gt, on="encounter_id")
+            cohort = ids[ids["ground_truth_drug"] != 0].reset_index(drop=True)
             oof = pd.DataFrame(oof_store[best]["proba"],
                                 columns=[f"p_{c}" for c in CLASSES])
             oof.insert(0, "encounter_id", cohort["encounter_id"].values)
