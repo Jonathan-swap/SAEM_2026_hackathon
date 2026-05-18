@@ -266,7 +266,7 @@ outcome` (exit code 0). Current state: top feature MI = 0.449
 Triton Tabs, Coral Dust}. Sourced from `outcomes.csv` (which in turn
 sources from `Task1_Two_Tier_Input_Data.csv`).
 
-### Five architectures (all retained as options)
+### Six architectures (all retained as options)
 
 | § | Architecture | Predicts | Cohort | Train script |
 |---|---|---|---|---|
@@ -275,6 +275,7 @@ sources from `Task1_Two_Tier_Input_Data.csv`).
 | **7d** | Tier-2 multiclass | Kraken / Triton / Coral (given drug+) | 157 drug-positive | `src/task1_drug_id/train_tier2.py` |
 | **7e** | **Cascade** (tier-1 × tier-2 → 4-class) | None / Kraken / Triton / Coral | all 261 (via cascade) | `src/task1_drug_id/compare_cascade.py` |
 | **7f** | Kraken vs (Triton + Coral) | Kraken / other-drug | 157 drug-positive | `src/task1_drug_id/train_kraken_binary.py` |
+| **7g** | Triton vs Coral | Triton / Coral | 99 non-Kraken drug-positive | `src/task1_drug_id/train_triton_coral.py` |
 
 ### Headline results — all five architectures
 
@@ -287,6 +288,7 @@ sources from `Task1_Two_Tier_Input_Data.csv`).
 | Tier-2 (3 drugs only) | hgb | 45 | 3 | 0.678 macro | 0.536 macro | 0.556 |
 | Cascade (4-class via tier-1 × tier-2) | rforest | 74 | 4 | 0.712 macro | 0.449 macro | 0.460 |
 | **Kraken vs rest** | **hgb** | 45 | 2 | **0.825** | **0.877** | **0.800** |
+| Triton vs Coral | logreg | 21 | 2 | **0.389** ⚠ | 0.560 | 0.429 |
 
 **5-fold CV:**
 
@@ -297,6 +299,7 @@ sources from `Task1_Two_Tier_Input_Data.csv`).
 | Tier-2 (3 drugs only) | rforest | 157 | 3 | 0.709 macro | 0.591 macro | 0.528 |
 | Cascade | rforest | 261 | 4 | 0.676 macro | 0.379 macro | 0.475 |
 | **Kraken vs rest** | **hgb** | 157 | 2 | **0.806** | **0.769** | **0.751** |
+| Triton vs Coral | rforest | 99 | 2 | **0.506** ⚠ | 0.600 | 0.515 |
 
 Notes on comparing these numbers:
 - **Direct vs Cascade** are directly comparable — both predict all
@@ -315,6 +318,15 @@ Notes on comparing these numbers:
   holdout. Clinically meaningful because Kraken drives a
   completely different ED workup (rhabdomyolysis labs +
   aggressive fluids + cooling) from Triton/Coral (supportive).
+- **Triton vs Coral** is a 2-class problem (52% Triton) on the
+  non-Kraken drug-positive cohort (n=99). **Documents the
+  ceiling**: holdout ROC-AUC 0.32-0.39 across all models (worse
+  than chance). Triton's and Coral's defining tokens live in
+  HPI/MDM (post-triage); their triage vitals/labs are
+  near-identical. Any architecture that has to separate Triton
+  from Coral at triage inherits this ceiling. The proper fix is
+  to move that decision to Task-2's 4-hour-horizon feature set,
+  where the PE binaries finally become visible.
 
 ### Common context
 
@@ -571,6 +583,60 @@ mostly-noise decisions that cap macro AUC. If the deployment
 question is "should this patient get rhabdo workup?", this
 Kraken-vs-rest model is the cleanest answer (PPV 0.86 at
 prevalence 0.53).
+
+### 7g. Triton vs Coral binary classifier — **the ceiling**
+
+Companion to §7f. Cohort: 99 patients with `ground_truth_drug
+∈ {Triton, Coral}` (excludes None AND Kraken). The last unanswered
+sub-decision in Task 1.
+
+```powershell
+.venv\Scripts\python.exe src\task1_drug_id\train_triton_coral.py
+```
+
+**Result: at-or-below chance on the holdout.** This is the
+empirical proof that Triton and Coral cannot be discriminated from
+triage data alone.
+
+**5-fold CV (n=99, 52% Triton):**
+
+| Model | ROC-AUC | PR-AUC | accuracy | BSS |
+|---|---:|---:|---:|---:|
+| logreg | 0.411 | 0.483 | 0.445 | −0.618 |
+| **rforest** | **0.506** | **0.600** | **0.515** | **−0.038** |
+| hgb | 0.458 | 0.538 | 0.523 | −0.356 |
+
+**Temporal holdout (test = last day, n=21, 57% Triton):**
+
+| Model | ROC-AUC | PR-AUC | accuracy | Sens | Spec | BSS |
+|---|---:|---:|---:|---:|---:|---:|
+| **logreg** | **0.389** ⚠ | 0.560 | 0.429 | 0.67 | 0.11 | −0.874 |
+| rforest | 0.389 ⚠ | 0.609 | 0.476 | 0.58 | 0.33 | −0.165 |
+| hgb | 0.324 ⚠ | 0.496 | 0.381 | 0.42 | 0.33 | −0.728 |
+
+**Why this is the ceiling**:
+
+- v6 Triton signature: palpitations / "ringing in ears" /
+  psychomotor slowing — all live in HPI/MDM, **post-triage**.
+- v6 Coral signature: time distortion / perceptual alteration /
+  spatial disorientation — same, **post-triage**.
+- Both have **near-normal triage vitals and labs** (HR ~88-90,
+  Temp ~37.1-37.2, AG <12, all peak labs near-normal). The two
+  classes are essentially identical at minute 0.
+
+All BSS values are negative — every model loses to "always predict
+the prevalence". The tiny holdout (n=21) inflates variance but
+doesn't explain the directional finding: CV (n=99) also lands at
+ROC-AUC 0.41-0.51.
+
+**Implication**: any architecture that needs to separate Triton
+from Coral at triage (the tier-2 multiclass §7d, the cascade §7e)
+inherits this ceiling. The path forward for Triton/Coral
+discrimination is the **4-hour-horizon feature set** (Task 2's
+`features_fourh.csv`), where the PE binaries appear:
+`pe_reduced_tracking` and `pe_slow_responses` flag Triton;
+`pe_unsteady_gait` and `pe_ataxia` flag Coral (per v6 +
+`research/03_v6_feature_evaluation.md`).
 
 ---
 
