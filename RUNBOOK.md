@@ -433,6 +433,41 @@ tier-2 with a Task-2 4h-horizon model gives much better discrimination
 because the 4h PE findings (reduced_tracking, slow_responses for
 Triton; unsteady_gait for Coral) finally become visible.
 
+### 7e. Direct 4-class vs cascade (tier-1 + tier-2)
+
+Apples-to-apples comparison of the two architectures for Task 1:
+direct 4-class (§7a/7b) versus the cascade (§7c tier-1 → §7d tier-2,
+combined as `P(None)=1−P(drug)`, `P(K)=P(drug)·P(K|drug)`, etc.).
+
+```powershell
+.venv\Scripts\python.exe src\task1_drug_id\compare_cascade.py
+```
+
+Identical CV folds + identical temporal split. Outputs:
+- `derived/task1_cascade_vs_direct_summary.csv`
+- `derived/task1_cascade_vs_direct_report.md`
+- `research/04_cascade_vs_direct.md` (analysis + recommendation)
+
+**Temporal holdout (the deployment metric, n=74, rforest):**
+
+| Architecture | macro ROC-AUC | macro PR-AUC | accuracy | log-loss |
+|---|---:|---:|---:|---:|
+| Direct 4-class | 0.697 | 0.408 | 0.392 | 1.218 |
+| **Cascade** | **0.712** | **0.449** | **0.460** | **1.209** |
+| Δ (cascade − direct) | **+0.015** | **+0.041** | **+0.068** | −0.009 |
+
+Cascade wins macro AUC on **all 3** models on the holdout (logreg
++0.008, rforest +0.015, hgb +0.008) and macro PR-AUC on 2/3.
+Per-class: cascade adds **+3-4 points to Kraken AUC** for logreg
+and rforest. CV is essentially tied (small AUC losses within
+fold noise, small accuracy gains).
+
+**Recommendation**: ship the cascade for deployment. It also
+produces tier-1 and tier-2 probabilities separately, which is what
+the Task-3 triage calculator's two-card UI already wants.
+
+Details: [`research/04_cascade_vs_direct.md`](research/04_cascade_vs_direct.md).
+
 ---
 
 ## 8. Train + evaluate Task 2 (4h deterioration)
