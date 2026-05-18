@@ -1,0 +1,25 @@
+test,result,detail
+encounter_id_unique__triage,PASS,0 duplicate(s)
+encounter_id_unique__fourh,PASS,0 duplicate(s)
+cohort_match_triage_vs_fourh,PASS,only_in_triage=0  only_in_fourh=0
+arrival_date_in_2024_2027,PASS,"range = [2026-05-11 00:00:00, 2026-05-15 00:00:00]"
+vital_in_range__triage_heart_rate,PASS,"0 value(s) outside [20, 250]"
+vital_in_range__triage_respiratory_rate,PASS,"0 value(s) outside [4, 60]"
+vital_in_range__triage_snapshot.systolic_bp,PASS,"0 value(s) outside [50, 260]"
+vital_in_range__triage_snapshot.diastolic_bp,PASS,"0 value(s) outside [20, 160]"
+vital_in_range__triage_snapshot.oxygen_saturation,PASS,"0 value(s) outside [40, 100]"
+vital_in_range__triage_temperature_c,PASS,"0 value(s) outside [32.0, 42.5]"
+vital_in_range__triage_gcs,PASS,"0 value(s) outside [3, 15]"
+vital_in_range__triage_age,PASS,"0 value(s) outside [0, 120]"
+vital_in_range__triage_lab_glucose,PASS,"0 value(s) outside [20, 1200]"
+vital_in_range__triage_lab_ph,PASS,"0 value(s) outside [6.7, 7.8]"
+vital_in_range__triage_lab_sodium,PASS,"0 value(s) outside [110, 175]"
+vital_in_range__triage_lab_potassium,PASS,"0 value(s) outside [1.5, 8.0]"
+vital_in_range__triage_lab_anion_gap,PASS,"0 value(s) outside [0, 50]"
+vital_in_range__triage_lab_hemoglobin,PASS,"0 value(s) outside [4, 22]"
+no_outcome_columns__triage,PASS,leaked=[]
+no_outcome_columns__fourh,PASS,leaked=[]
+no_all_nan_columns__triage,PASS,all-NaN count = 0: []
+no_all_nan_columns__fourh,PASS,all-NaN count = 0: []
+no_duplicate_columns__triage,PASS,dups=[]
+no_duplicate_columns__fourh,PASS,dups=[]
