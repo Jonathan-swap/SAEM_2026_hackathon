@@ -336,6 +336,45 @@ Artifacts (Task 1): `derived/task1_temporal_summary.csv`
 Holdout AUC ≈ CV AUC — the Task-1 ceiling is data-bound. See
 `research/03_v6_feature_evaluation.md`.
 
+### 7c. Binary tier-1 classifier (drug vs no-drug)
+
+Mirrors the tier-1 question from the organizers' file
+`Task1_Two_Tier_Input_Data.csv`: is this patient on ANY festival
+drug? Collapses Kraken+Triton+Coral into a single positive class.
+
+```powershell
+.venv\Scripts\python.exe src\task1_drug_id\train_binary.py
+```
+
+Runs BOTH 5-fold CV and temporal holdout in one go. Artifacts:
+- `derived/task1_binary_baseline_summary.csv` (CV)
+- `derived/task1_binary_oof_predictions.csv` (CV OOF)
+- `derived/task1_binary_temporal_summary.csv` (holdout)
+- `derived/task1_binary_temporal_predictions.csv` (holdout preds)
+
+Class prevalence: 60% drug-positive / 40% no-drug.
+
+**5-fold CV (n=261):**
+
+| Model | log-loss | accuracy | ROC-AUC | PR-AUC | Sens | Spec |
+|-------|---------:|---------:|--------:|-------:|-----:|-----:|
+| logreg | 0.66 | 0.65 | 0.69 | 0.79 | 0.66 | 0.62 |
+| **rforest** | **0.62** | **0.70** | **0.73** | **0.82** | 0.70 | 0.69 |
+| hgb | 0.78 | 0.65 | 0.72 | 0.81 | 0.66 | 0.65 |
+
+**Temporal holdout (test = last day, n=74):**
+
+| Model | ROC-AUC | PR-AUC | Sens | Spec | PPV | NPV | BSS |
+|-------|--------:|-------:|-----:|-----:|----:|----:|----:|
+| logreg | 0.678 | 0.731 | 0.67 | 0.59 | 0.71 | 0.53 | −0.025 |
+| **rforest** | **0.717** | **0.791** | 0.62 | **0.69** | **0.76** | 0.54 | **+0.109** |
+| hgb | 0.684 | 0.772 | 0.69 | 0.48 | 0.67 | 0.50 | −0.115 |
+
+Test-set prevalence 0.61. The binary task is materially easier than
+the 4-class drug-ID — 0.72 ROC-AUC vs 0.70 — because Kraken's strong
+sympathomimetic triage signature is shared by the easier-to-detect
+"drug-positive" superset.
+
 ---
 
 ## 8. Train + evaluate Task 2 (4h deterioration)
@@ -427,10 +466,14 @@ dominant class.
 
 Last day of festival (peak day) used as test; prior days = train.
 With the 5-day release this is **112 train / 45 test** for the
-drug-positive cohort.
+drug-positive cohort, or **187 train / 74 test** for all patients.
 
 ```powershell
-.venv\Scripts\python.exe src\eval_temporal.py    # Task 1 + Task 2 in one run
+# Default: drug-positive cohort
+.venv\Scripts\python.exe src\eval_temporal.py
+
+# All-patients cohort
+.venv\Scripts\python.exe src\eval_temporal.py --cohort all
 ```
 
 Artifacts (Task 2): `derived/task2_temporal_summary.csv` +
@@ -445,13 +488,26 @@ Artifacts (Task 2): `derived/task2_temporal_summary.csv` +
 
 Test-set class prevalence: Discharge 0.73 / Floor 0.16 / ICU 0.11.
 
-**Per-class metrics for rforest (holdout) — headline numbers:**
+**Per-class metrics for rforest (drug-positive holdout) — headline:**
 
 | Class | Prevalence | ROC-AUC | PR-AUC | Brier | BSS |
 |---|---:|---:|---:|---:|---:|
 | Discharge | 0.73 | 0.992 | 0.997 | 0.054 | **+0.722** |
 | Floor | 0.16 | 0.962 | 0.858 | 0.070 | **+0.464** |
 | ICU | 0.11 | **1.000** | **1.000** | 0.037 | **+0.626** |
+
+**All-patients holdout (n=261, test = last day n=74)** — `task2_temporal_summary_all.csv`:
+
+| Model | log-loss | accuracy | macro ROC-AUC | macro PR-AUC |
+|-------|---------:|---------:|--------------:|-------------:|
+| logreg | — | — | 0.920 | 0.836 |
+| **rforest** | — | — | **0.989** | **0.971** |
+| hgb | — | — | 0.972 | 0.922 |
+
+Task 2 generalises even better when None-class is included
+(0.989 vs 0.985 drug-positive) — the additional Discharge-heavy
+None patients provide more high-confidence negatives without
+hurting Floor/ICU discrimination.
 
 Task-2 holdout rforest hits **0.985 macro ROC-AUC and 0.952 macro
 PR-AUC** on the peak festival day. ICU-class ROC-AUC and PR-AUC

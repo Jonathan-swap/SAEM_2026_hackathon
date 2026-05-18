@@ -18,6 +18,7 @@ Writes:
 """
 from __future__ import annotations
 
+import argparse
 from pathlib import Path
 
 import numpy as np
@@ -277,9 +278,10 @@ def run_task1() -> dict:
 
 # ---------- Task 2 ----------------------------------------------------
 
-def run_task2() -> dict:
+def run_task2(cohort: str = "drug-positive") -> dict:
     print("\n" + "=" * 78)
-    print("Task 2 — deterioration at 4h (temporal holdout)")
+    print(f"Task 2 — deterioration at 4h (temporal holdout, cohort: "
+          f"{cohort})")
     print("=" * 78)
 
     X_all = pd.read_csv(DERIVED / "features_fourh.csv")
@@ -292,8 +294,13 @@ def run_task2() -> dict:
             X_all = X_all.drop(columns=[c])
     df = X_all.merge(outcomes, on="encounter_id", how="inner")
     n_before = len(df)
-    df = df[df["ground_truth_drug"] != 0].reset_index(drop=True)
-    print(f"Cohort filter (drug-positive): {n_before} -> {len(df)} patients")
+    if cohort == "drug-positive":
+        df = df[df["ground_truth_drug"] != 0].reset_index(drop=True)
+        print(f"Cohort filter (drug-positive): {n_before} -> {len(df)} patients")
+    elif cohort == "all":
+        print(f"Cohort: all {n_before} patients (no filter)")
+    else:
+        raise ValueError(f"Unknown cohort: {cohort!r}")
 
     is_train, is_test, train_max, test_date = temporal_split(df)
     print(f"Train: {is_train.sum()} encounters, dates up to {train_max.date()}")
@@ -426,12 +433,14 @@ def run_task2() -> dict:
     print(pd.DataFrame(cm, index=DISPO_CLASSES,
                         columns=DISPO_CLASSES).to_string())
 
-    summary.to_csv(DERIVED / "task2_temporal_summary.csv")
-    pd.DataFrame(pred_rows).to_csv(
-        DERIVED / "task2_temporal_predictions.csv", index=False)
-    print(f"\nSaved: derived/task2_temporal_summary.csv "
-          f"+ task2_temporal_predictions.csv")
-    return {"summary": summary, "best": best,
+    suffix = "" if cohort == "drug-positive" else "_all"
+    summary_path = DERIVED / f"task2_temporal_summary{suffix}.csv"
+    preds_path = DERIVED / f"task2_temporal_predictions{suffix}.csv"
+    summary.to_csv(summary_path)
+    pd.DataFrame(pred_rows).to_csv(preds_path, index=False)
+    print(f"\nSaved: {summary_path}")
+    print(f"       {preds_path}")
+    return {"summary": summary, "best": best, "cohort": cohort,
             "n_train": int(is_train.sum()), "n_test": int(is_test.sum()),
             "train_max": train_max, "test_date": test_date}
 
@@ -449,8 +458,18 @@ def _df_to_md(df: pd.DataFrame) -> str:
 
 
 def main() -> None:
+    ap = argparse.ArgumentParser(description=__doc__,
+                                  formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--cohort",
+                    choices=["drug-positive", "all"],
+                    default="drug-positive",
+                    help="Task-2 cohort. drug-positive (default) = the "
+                         "157 festival-drug patients (brief's scope); "
+                         "all = every encounter (n=261).")
+    args = ap.parse_args()
+
     t1 = run_task1()
-    t2 = run_task2()
+    t2 = run_task2(cohort=args.cohort)
 
     lines = ["# Temporal holdout evaluation\n",
              f"Train on all encounters with `encounter_arrival_date "
