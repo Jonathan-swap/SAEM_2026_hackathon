@@ -107,7 +107,7 @@ Steps executed (in order):
 
 | # | Script | Output |
 |---|---|---|
-| 1 | `src/features/extract_narratives.py`    | `derived/narratives.jsonl` |
+| 1 | `src/features/extract_narratives.py`    | `derived/narratives_triage.jsonl` (triage-only) + `derived/narratives_fourh.jsonl` (triage + 4h narratives); leakage sentinel asserts the triage file is 4h-free |
 | 2 | `src/features/extract_structured.py`    | `derived/features_triage.csv` + `features_fourh.csv` (outcomes excluded) |
 | 3 | `src/features/extract_time_features.py` | adds Groups A–G time features (capped at min ≤ 240) |
 | 4 | `src/features/extract_differentials.py` | adds triage↔4h diffs to `features_fourh.csv` |
@@ -165,8 +165,11 @@ you also want the 10-agent drug-probability features for Task 2.
 ### 5b. 10-agent LLM consensus (v6-aligned prompts)
 
 Requires the Claude Code harness — spawns 10 subagents in parallel,
-each reading `derived/narratives.jsonl` under a different reasoning
-emphasis. **Prompts: [`src/labels/agents/PROMPTS.md`](src/labels/agents/PROMPTS.md).**
+each reading `derived/narratives_fourh.jsonl` (the full triage + 4h
+record; the triage-only `narratives_triage.jsonl` is reserved for
+triage-horizon NLP and would starve the agents of the 4h narrative
+blocks they need to derive case-fixed toxidrome labels) under a
+different reasoning emphasis. **Prompts: [`src/labels/agents/PROMPTS.md`](src/labels/agents/PROMPTS.md).**
 
 The prompts open with a **v6 PRE-READ block** that every agent
 consumes: corrected fixed drug→toxidrome mapping (Triton is *not*
@@ -1103,7 +1106,8 @@ experiments (currently disabled). Reinstall: `pip install -r requirements.txt`.
 ```
 data/                          ← raw xlsx + ground-truth csv (gitignored)
 derived/                       ← all pipeline outputs (tracked)
-  narratives.jsonl
+  narratives_triage.jsonl      ← triage-only notes (chief complaint, brief note, mode of arrival)
+  narratives_fourh.jsonl       ← triage + 4h narratives (HPI, PE+, MDM, course, meds/procs) — agent input
   features_triage.csv          ← Task-1 inputs (triage horizon)
   features_fourh.csv           ← Task-2 inputs (4h horizon)
   ground_truth.csv             ← manual drug labels (intermediate)
