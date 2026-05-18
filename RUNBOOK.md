@@ -278,29 +278,50 @@ sources from `Task1_Two_Tier_Input_Data.csv`).
 | **7g** | Triton vs Coral | Triton / Coral | 99 non-Kraken drug-positive | `src/task1_drug_id/train_triton_coral.py` |
 | **7h** | Cascade variants A/B/C vs direct | None / K / T / C (via three different cascade compositions) | all 261 | `src/task1_drug_id/compare_cascades.py` |
 
-### Headline results — all five architectures
+### Headline results
 
-**Temporal holdout (last day = test):**
+**Temporal holdout (last day = test) — 4-class architectures (n=74)
+side-by-side:**
 
-| Architecture | Best model | n test | classes | ROC-AUC | PR-AUC | accuracy |
-|---|---|---:|:-:|---:|---:|---:|
-| Direct 4-class | rforest | 74 | 4 | 0.697 macro | 0.408 macro | 0.392 |
-| Tier-1 binary (drug vs no) | rforest | 74 | 2 | 0.717 | 0.791 | 0.649 |
-| Tier-2 (3 drugs only) | hgb | 45 | 3 | 0.678 macro | 0.536 macro | 0.556 |
-| Cascade (4-class via tier-1 × tier-2) | rforest | 74 | 4 | 0.712 macro | 0.449 macro | 0.460 |
-| **Kraken vs rest** | **hgb** | 45 | 2 | **0.825** | **0.877** | **0.800** |
-| Triton vs Coral | logreg | 21 | 2 | **0.389** ⚠ | 0.560 | 0.429 |
+| Architecture | Best model | macro ROC-AUC | macro PR-AUC | accuracy |
+|---|---|---:|---:|---:|
+| Direct 4-class | rforest | 0.697 | 0.408 | 0.392 |
+| Cascade-A (tier-1 + tier-2-multi) | rforest | 0.712 | 0.449 | 0.460 |
+| Cascade-C (tier-1 + K-vs-rest + T-vs-C model) | rforest | 0.712 | 0.454 | 0.446 |
+| **Cascade-B (tier-1 + K-vs-rest + prev)** | **hgb** | **0.725** | **0.447** | **0.432** |
 
-**5-fold CV:**
+**Cascade-B with hgb is the current deployment champion** — wins on
+macro ROC-AUC across all three model families (logreg +0.060, rforest
++0.030, hgb +0.040 over direct). See §7h for the comparison details
+and `research/05_cascade_variants.md` for the analysis.
 
-| Architecture | Best model | n | classes | ROC-AUC | PR-AUC | accuracy |
-|---|---|---:|:-:|---:|---:|---:|
-| Direct 4-class | rforest | 261 | 4 | 0.695 macro | 0.456 macro | 0.440 |
-| Tier-1 binary (drug vs no) | rforest | 261 | 2 | 0.730 | 0.820 | 0.700 |
-| Tier-2 (3 drugs only) | rforest | 157 | 3 | 0.709 macro | 0.591 macro | 0.528 |
-| Cascade | rforest | 261 | 4 | 0.676 macro | 0.379 macro | 0.475 |
-| **Kraken vs rest** | **hgb** | 157 | 2 | **0.806** | **0.769** | **0.751** |
-| Triton vs Coral | rforest | 99 | 2 | **0.506** ⚠ | 0.600 | 0.515 |
+**Binary sub-problems (different cohorts and class sets, not directly
+comparable to the 4-class numbers above):**
+
+| Sub-problem | Best model | n test | ROC-AUC | PR-AUC | accuracy |
+|---|---|---:|---:|---:|---:|
+| Tier-1: drug vs no-drug | rforest | 74 | 0.717 | 0.791 | 0.649 |
+| Tier-2 multiclass: K/T/C (3-class) | hgb | 45 | 0.678 macro | 0.536 macro | 0.556 |
+| **Kraken vs rest** | **hgb** | 45 | **0.825** | **0.877** | **0.800** |
+| Triton vs Coral | logreg | 21 | **0.389** ⚠ | 0.560 | 0.429 |
+
+**5-fold CV (4-class architectures, n=261):**
+
+| Architecture | Best model | macro ROC-AUC | macro PR-AUC | accuracy |
+|---|---|---:|---:|---:|
+| Direct 4-class | rforest | 0.677 | 0.365 | 0.433 |
+| Cascade-A (tier-1 + tier-2-multi) | rforest | 0.681 | 0.391 | 0.487 |
+| Cascade-C (tier-1 + K-vs-rest + T-vs-C model) | rforest | 0.677 | 0.389 | 0.487 |
+| **Cascade-B (tier-1 + K-vs-rest + prev)** | rforest | **0.683** | **0.388** | **0.483** |
+
+**5-fold CV (binary sub-problems):**
+
+| Sub-problem | Best model | n | ROC-AUC | PR-AUC | accuracy |
+|---|---|---:|---:|---:|---:|
+| Tier-1: drug vs no-drug | rforest | 261 | 0.730 | 0.820 | 0.700 |
+| Tier-2 multiclass: K/T/C | rforest | 157 | 0.709 macro | 0.591 macro | 0.528 |
+| **Kraken vs rest** | **hgb** | 157 | **0.806** | **0.769** | **0.751** |
+| Triton vs Coral | rforest | 99 | **0.506** ⚠ | 0.600 | 0.515 |
 
 Notes on comparing these numbers:
 - **Direct vs Cascade** are directly comparable — both predict all
