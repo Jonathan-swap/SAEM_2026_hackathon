@@ -221,8 +221,11 @@ def predict(model: dict, X: pd.DataFrame,
 
     missing = [c for c in model["feature_cols"] if c not in Xf.columns]
     if missing:
-        raise ValueError(f"Missing feature columns: {missing[:5]}"
-                         f"{' ... ' if len(missing)>5 else ''}")
+        print(f"WARNING: {len(missing)} feature(s) missing from input "
+              f"(filled with 0): {missing[:5]}"
+              f"{' ...' if len(missing) > 5 else ''}")
+        for c in missing:
+            Xf[c] = 0
     Xf = Xf[model["feature_cols"]]
     Xp = np.asarray(model["preprocessor"].transform(Xf), dtype=float)
 
