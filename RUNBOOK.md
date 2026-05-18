@@ -108,12 +108,13 @@ Steps executed (in order):
 | # | Script | Output |
 |---|---|---|
 | 1 | `src/features/extract_narratives.py`    | `derived/narratives.jsonl` |
-| 2 | `src/features/extract_structured.py`    | `derived/features_triage.csv` + `features_fourh.csv` |
+| 2 | `src/features/extract_structured.py`    | `derived/features_triage.csv` + `features_fourh.csv` (outcomes excluded) |
 | 3 | `src/features/extract_time_features.py` | adds Groups A–G time features (capped at min ≤ 240) |
 | 4 | `src/features/extract_differentials.py` | adds triage↔4h diffs to `features_fourh.csv` |
 | 5 | `src/features/extract_note_features.py` | adds parsed onset minutes + festival flags |
-| 6 | `src/labels/load_ground_truth.py`       | `derived/ground_truth.csv` (drug class) |
-| 7 | `src/labels/build_outcomes.py`          | `derived/outcomes.csv` (drug class + disposition) |
+| 6 | `src/features/extract_v6_features.py`   | adds PE binaries + peak-lab thresholds + triage keywords (see §4.1 for details) |
+| 7 | `src/labels/load_ground_truth.py`       | `derived/ground_truth.csv` (drug class) |
+| 8 | `src/labels/build_outcomes.py`          | `derived/outcomes.csv` (drug class + disposition) |
 
 Pass criterion: each step logs `OK` and the time-features script ends
 with `OK: no leakage; triage features contain only arrival-time +
@@ -125,9 +126,10 @@ The feature tables (`features_triage.csv`, `features_fourh.csv`)
 **do NOT contain any outcome columns** — every Task-1 and Task-2
 trainer pulls labels from `outcomes.csv` exclusively.
 
-### 4.1. v6 features (run manually after §4)
+### 4.1. v6 features (integrated into the pipeline)
 
-`run_pipeline.py` does not yet include this step. Run it explicitly:
+As of the latest pipeline, `extract_v6_features.py` runs automatically
+as step 6 of §4. You can also invoke it standalone for development:
 
 ```powershell
 .venv\Scripts\python.exe src\features\extract_v6_features.py
@@ -532,20 +534,13 @@ When fresh xlsx arrives the day-of:
 ```powershell
 # Drop the new xlsx + ground truth at data/ first, then:
 .venv\Scripts\python.exe run_pipeline.py --skip-agents
-# Manually re-run the v6 step (not yet in run_pipeline.py):
-.venv\Scripts\python.exe src\features\extract_v6_features.py
-.venv\Scripts\python.exe src\features\cleanup_features.py
-.venv\Scripts\python.exe src\task1_drug_id\train_baseline.py
-.venv\Scripts\python.exe src\task2_deterioration\train_baseline.py
 ```
 
-Steps to add to `run_pipeline.py` before Phase 2 (TODO): insert
-`extract_v6_features.py` between step 5 (`extract_note_features`)
-and step 6 (`load_ground_truth`) so the v6 features are available
-to `cleanup_features.py`'s leakage sentinel + the training scripts.
-
-Total wall-clock today: ~5–10 min on a laptop (excluding the LLM
-agent step which is harness-spawned).
+`run_pipeline.py` now runs the full pipeline end-to-end:
+feature extraction (incl. v6), label load, outcomes consolidation,
+EDA, cleanup, leakage sentinel, and both task baselines. Total
+wall-clock today: ~5–10 min on a laptop (excluding the LLM agent
+step which is harness-spawned).
 
 Flags:
 - `--features-only` — stop after §4, skip training

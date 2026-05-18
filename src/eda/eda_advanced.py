@@ -357,17 +357,24 @@ def main() -> None:
     print(f"Loaded triage={triage.shape}, fourh={fourh.shape}, "
           f"probs={probs.shape}")
 
+    # Outcomes (canonical label source — feature tables no longer
+    # carry encounter_disposition_label).
+    outcomes = pd.read_csv(DERIVED / "outcomes.csv")[
+        ["encounter_id", "encounter_disposition_label"]]
+
     # Align targets to feature rows
     triage_ix = triage["encounter_id"].tolist()
     fourh_ix = fourh["encounter_id"].tolist()
     argmax_full = probs.set_index("encounter_id")["argmax_class"]
     argmax_t = argmax_full.reindex(triage_ix).reset_index(drop=True)
 
-    dispo_full = triage.set_index("encounter_id")["encounter_disposition_label"]
+    dispo_full = outcomes.set_index("encounter_id")[
+        "encounter_disposition_label"].reindex(triage_ix)
     # Task-2 cohort: drug-positive
     cohort_ids = probs[probs["argmax_class"] != "None"]["encounter_id"].tolist()
-    fourh_cohort = fourh[fourh["encounter_id"].isin(cohort_ids)].reset_index(
-        drop=True)
+    fourh_cohort = (fourh[fourh["encounter_id"].isin(cohort_ids)]
+                       .merge(outcomes, on="encounter_id", how="left")
+                       .reset_index(drop=True))
     y_dispo_label = fourh_cohort["encounter_disposition_label"]
     dispo_map = {"Discharge": 0, "Floor": 1, "ICU": 2}
     y_dispo = y_dispo_label.map(dispo_map).to_numpy()
@@ -375,8 +382,8 @@ def main() -> None:
                  "None": 3}
     y_drug = argmax_t.map(drug_map).to_numpy()
 
-    # X for tasks (drop the label cols from X)
-    X_t_for_drug = triage.drop(columns=["encounter_disposition_label"])
+    # X for tasks (drop the label col before passing to model code)
+    X_t_for_drug = triage.copy()  # outcomes already absent
     X_f_for_dispo = fourh_cohort.drop(columns=["encounter_disposition_label"])
 
     section_a_missingness(rep, triage, fourh, argmax_t, dispo_full)
