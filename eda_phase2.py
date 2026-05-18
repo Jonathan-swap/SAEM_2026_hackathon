@@ -254,30 +254,161 @@ KEY_LABS = [
     "triage_lab_anion_gap",
     "triage_lab_hemoglobin",
 ]
+PMH_FLAGS = [
+    "triage_mh_psych",
+    "triage_mh_cardiac",
+    "triage_mh_pulm",
+    "triage_mh_renal",
+    "triage_mh_substance_use",
+]
+DEMOGRAPHICS_NUMERIC = [
+    "triage_age",
+    "triage_esi",
+    "triage_pain_scale",
+]
+FOURH_REASSESS_VITALS = [
+    "heart_rate_4h",
+    "respiratory_rate_4h",
+    "systolic_bp_4h",
+    "diastolic_bp_4h",
+    "oxygen_saturation_4h",
+    "temperature_c_4h",
+    "gcs_4h",
+]
+FOURH_DELTAS = [
+    "delta_hr",
+    "delta_temp",
+    "delta_gcs",
+]
+PEAK_LABS = [
+    "peak_lactate",
+    "peak_cpk",
+    "peak_vbg_ph",
+    "peak_troponin",
+    "peak_hr",
+    "peak_temp",
+]
+INTERVENTIONS = [
+    "ivf_count_0_4h",
+    "benzodiazepine_count_0_4h",
+    "reversal_count_0_4h",
+    "intubated_0_4h",
+    "positive_pressure_0_4h",
+    "cvc_0_4h",
+]
+CAND_COMPOSITES = [
+    "cand_news_total",
+    "cand_shock_index",
+    "cand_sympathetic_score",
+    "cand_cns_depression_score",
+    "cand_pmh_count",
+    "cand_poc_abn_count",
+]
+
+
+def density_panel(ax, s1: pd.Series, s2: pd.Series, title: str,
+                   xlabel: str = "") -> None:
+    """Density-normalised comparison. Auto-switches to side-by-side
+    proportion bars for low-cardinality discrete data (so both phases
+    are visually comparable regardless of cohort size)."""
+    s1 = pd.to_numeric(s1, errors="coerce").dropna()
+    s2 = pd.to_numeric(s2, errors="coerce").dropna()
+    if s1.empty and s2.empty:
+        ax.text(0.5, 0.5, "no data", transform=ax.transAxes,
+                ha="center", va="center", fontsize=8)
+        ax.set_title(title, fontsize=9)
+        ax.set_xticks([]); ax.set_yticks([])
+        return
+    union_unique = (set(s1.unique()) if not s1.empty else set()) | \
+                   (set(s2.unique()) if not s2.empty else set())
+    if len(union_unique) <= 12:
+        vals = sorted(union_unique)
+        x = np.arange(len(vals))
+        w = 0.4
+        p1 = [float((s1 == v).mean()) if not s1.empty else 0 for v in vals]
+        p2 = [float((s2 == v).mean()) if not s2.empty else 0 for v in vals]
+        ax.bar(x - w / 2, p1, w, color="#1f77b4",
+               label=f"P1 (n={len(s1)})", alpha=0.85)
+        ax.bar(x + w / 2, p2, w, color="#d62728",
+               label=f"P2 (n={len(s2)})", alpha=0.85)
+        ax.set_xticks(x)
+        ax.set_xticklabels([str(v) for v in vals], fontsize=7)
+        ax.set_ylabel("proportion", fontsize=7)
+    else:
+        lo = float(min(s1.min() if not s1.empty else np.inf,
+                       s2.min() if not s2.empty else np.inf))
+        hi = float(max(s1.max() if not s1.empty else -np.inf,
+                       s2.max() if not s2.empty else -np.inf))
+        bins = np.linspace(lo, hi, 25)
+        if not s1.empty:
+            ax.hist(s1, bins=bins, density=True, alpha=0.45,
+                    color="#1f77b4", label=f"P1 (n={len(s1)})")
+        if not s2.empty:
+            ax.hist(s2, bins=bins, density=True, alpha=0.45,
+                    color="#d62728", label=f"P2 (n={len(s2)})")
+        ax.set_ylabel("density", fontsize=7)
+    ax.set_title(title, fontsize=9)
+    if xlabel:
+        ax.set_xlabel(xlabel, fontsize=7)
+    ax.tick_params(labelsize=7)
+    ax.legend(fontsize=6)
 
 
 def make_distribution_plot(p1: pd.DataFrame, p2: pd.DataFrame,
                             cols: list[str], title: str,
-                            out_path: Path) -> None:
+                            out_path: Path,
+                            label_strip: str = "triage_") -> None:
+    """Density-normalised multi-panel comparison. `cols` are matched
+    against both DataFrames; missing-in-one columns are skipped."""
     cols = [c for c in cols if c in p1.columns and c in p2.columns]
     if not cols:
         return
     ncol = 4
     nrow = (len(cols) + ncol - 1) // ncol
-    fig, axes = plt.subplots(nrow, ncol, figsize=(ncol * 3.2, nrow * 2.6))
+    fig, axes = plt.subplots(nrow, ncol, figsize=(ncol * 3.4, nrow * 2.8))
     axes = np.atleast_2d(axes).ravel()
     for i, col in enumerate(cols):
-        s1 = pd.to_numeric(p1[col], errors="coerce").dropna()
-        s2 = pd.to_numeric(p2[col], errors="coerce").dropna()
+        label = col.replace(label_strip, "").replace(".", " ")
+        density_panel(axes[i], p1[col], p2[col], label, col)
+    for j in range(len(cols), len(axes)):
+        axes[j].axis("off")
+    fig.suptitle(title, fontweight="bold", y=1.02)
+    fig.tight_layout()
+    fig.savefig(out_path, dpi=120, bbox_inches="tight")
+    plt.close(fig)
+
+
+def make_categorical_plot(p1: pd.DataFrame, p2: pd.DataFrame,
+                            cols: list[str], title: str,
+                            out_path: Path) -> None:
+    """Side-by-side proportion bar charts for categorical/string cols."""
+    cols = [c for c in cols if c in p1.columns and c in p2.columns]
+    if not cols:
+        return
+    ncol = 2
+    nrow = (len(cols) + ncol - 1) // ncol
+    fig, axes = plt.subplots(nrow, ncol, figsize=(ncol * 5.5, nrow * 3.2))
+    axes = np.atleast_2d(axes).ravel()
+    for i, col in enumerate(cols):
         ax = axes[i]
-        if len(s1):
-            ax.hist(s1, bins=20, alpha=0.5, color="#1f77b4",
-                    label=f"Phase 1 (n={len(s1)})")
-        if len(s2):
-            ax.hist(s2, bins=20, alpha=0.5, color="#d62728",
-                    label=f"Phase 2 (n={len(s2)})")
-        ax.set_title(col.replace("triage_", "").replace(".", " "),
-                       fontsize=9)
+        v1 = p1[col].astype(str).fillna("nan").value_counts(normalize=True)
+        v2 = p2[col].astype(str).fillna("nan").value_counts(normalize=True)
+        vals = sorted(set(v1.index) | set(v2.index),
+                       key=lambda x: -max(v1.get(x, 0), v2.get(x, 0)))
+        # cap to top-8 values to keep readable
+        if len(vals) > 8:
+            vals = vals[:8]
+        x = np.arange(len(vals))
+        w = 0.4
+        ax.bar(x - w / 2, [v1.get(v, 0) for v in vals], w,
+               color="#1f77b4", label=f"P1 (n={len(p1)})", alpha=0.85)
+        ax.bar(x + w / 2, [v2.get(v, 0) for v in vals], w,
+               color="#d62728", label=f"P2 (n={len(p2)})", alpha=0.85)
+        ax.set_xticks(x)
+        ax.set_xticklabels([v[:22] for v in vals], rotation=30,
+                              ha="right", fontsize=7)
+        ax.set_ylabel("proportion", fontsize=7)
+        ax.set_title(col, fontsize=9)
         ax.tick_params(labelsize=7)
         ax.legend(fontsize=6)
     for j in range(len(cols), len(axes)):
@@ -368,17 +499,55 @@ def main() -> None:
     print(f"  wrote phase1_vs_phase2_shift.csv: "
           f"{len(big_shift)} features with |Cohen d| > 0.5")
 
-    # Plots
-    make_distribution_plot(
-        p1_triage, p2_triage, KEY_VITALS,
-        "Triage vitals — Phase 1 vs Phase 2",
-        PLOTS / "vitals_distribution.png",
+    # Plots — density-normalised throughout. Each multi-panel image
+    # groups conceptually-related features so the user can scan one
+    # axis at a time.
+    plot_groups = [
+        ("vitals_distribution.png",
+         "Triage vitals — Phase 1 vs Phase 2 (density)",
+         KEY_VITALS, p1_triage, p2_triage, "triage_"),
+        ("labs_distribution.png",
+         "Triage POC labs — Phase 1 vs Phase 2 (density)",
+         KEY_LABS, p1_triage, p2_triage, "triage_lab_"),
+        ("pmh_flags.png",
+         "PMH flags — Phase 1 vs Phase 2",
+         PMH_FLAGS, p1_triage, p2_triage, "triage_mh_"),
+        ("demographics.png",
+         "Demographics + acuity — Phase 1 vs Phase 2",
+         DEMOGRAPHICS_NUMERIC, p1_triage, p2_triage, "triage_"),
+        ("fourh_reassessment_vitals.png",
+         "4-hour reassessment vitals — Phase 1 vs Phase 2 (density)",
+         FOURH_REASSESS_VITALS, p1_fourh, p2_fourh, ""),
+        ("fourh_deltas.png",
+         "Triage → 4h vital deltas — Phase 1 vs Phase 2 (density)",
+         FOURH_DELTAS, p1_fourh, p2_fourh, ""),
+        ("peak_labs.png",
+         "Peak labs (0–4h) — Phase 1 vs Phase 2 (density)",
+         PEAK_LABS, p1_fourh, p2_fourh, "peak_"),
+        ("interventions.png",
+         "ED interventions (0–4h counts/flags) — Phase 1 vs Phase 2",
+         INTERVENTIONS, p1_fourh, p2_fourh, ""),
+        ("cand_composites.png",
+         "Composite candidate features — Phase 1 vs Phase 2 (density)",
+         CAND_COMPOSITES, p1_triage, p2_triage, "cand_"),
+    ]
+    for name, title, cols, p1, p2, strip in plot_groups:
+        make_distribution_plot(p1, p2, cols, title,
+                                PLOTS / name, label_strip=strip)
+        print(f"  -> {name}")
+
+    # Categorical / string columns (mode_of_arrival, sex, race/ethn.)
+    make_categorical_plot(
+        p1_triage, p2_triage,
+        ["triage_mode_of_arrival",
+         "triage_sex_gender",
+         "triage_race_ethnicity",
+         "triage_chief_complaint"],
+        "Categorical triage fields — Phase 1 vs Phase 2",
+        PLOTS / "categorical_triage.png",
     )
-    make_distribution_plot(
-        p1_triage, p2_triage, KEY_LABS,
-        "Triage POC labs — Phase 1 vs Phase 2",
-        PLOTS / "labs_distribution.png",
-    )
+    print(f"  -> categorical_triage.png")
+
     make_missingness_plot(miss_triage, miss_fourh,
                           PLOTS / "missingness_top30.png")
     print(f"  wrote plots to {PLOTS.relative_to(ROOT)}")
@@ -432,13 +601,51 @@ def main() -> None:
     md.append("")
 
     md += [
-        "## Vital-sign distributions — Phase 1 vs Phase 2",
+        "## Density-normalised feature comparisons",
+        "",
+        "All histograms below use density on the y-axis (or "
+        "proportions for discrete data) so the 261-vs-139 sample-size "
+        "difference doesn't bias the visual comparison.",
+        "",
+        "### Triage vitals",
         "",
         "![vitals](eda_plots/vitals_distribution.png)",
         "",
-        "## Triage POC labs — Phase 1 vs Phase 2",
+        "### Triage POC labs",
         "",
         "![labs](eda_plots/labs_distribution.png)",
+        "",
+        "### Past medical history flags",
+        "",
+        "![pmh](eda_plots/pmh_flags.png)",
+        "",
+        "### Demographics + acuity (age, ESI, pain)",
+        "",
+        "![demographics](eda_plots/demographics.png)",
+        "",
+        "### Categorical triage fields (mode of arrival, sex, race, complaint)",
+        "",
+        "![categorical](eda_plots/categorical_triage.png)",
+        "",
+        "### 4-hour reassessment vitals",
+        "",
+        "![fourh-vitals](eda_plots/fourh_reassessment_vitals.png)",
+        "",
+        "### Triage → 4h vital deltas",
+        "",
+        "![deltas](eda_plots/fourh_deltas.png)",
+        "",
+        "### Peak labs (0–4h)",
+        "",
+        "![peak-labs](eda_plots/peak_labs.png)",
+        "",
+        "### ED interventions (0–4h counts/flags)",
+        "",
+        "![interventions](eda_plots/interventions.png)",
+        "",
+        "### Composite candidate features (NEWS, shock index, etc.)",
+        "",
+        "![composites](eda_plots/cand_composites.png)",
         "",
         "## Largest Phase-1 → Phase-2 distribution shifts",
         "",
@@ -458,28 +665,57 @@ def main() -> None:
         md.append("| — | (no features with |d| > 0.5) | — | — | — | — |")
     md.append("")
 
+    # Build a Phase-1 vs Phase-2 stats side-by-side table for triage.
+    # Numeric columns shared by both phases get P1 mean/median + P2
+    # mean/median + delta-mean + Cohen's d.
+    p1_stats = summary_stats(p1_triage, "triage").set_index("column")
+    p2_stats = stats_triage.set_index("column")
+    shift_lookup = shift_triage.set_index("column")
+
     md += [
-        "## Numeric-feature summary statistics (triage)",
+        "## Numeric-feature summary statistics (triage) — Phase-1 vs Phase-2",
         "",
-        "Showing only numeric columns with non-missing values; full "
-        "table in `feature_summary_stats.csv`.",
+        "Side-by-side change per numeric triage feature. Cohen's d > 0 "
+        "means Phase-2 mean is higher than Phase-1 mean. Full per-phase "
+        "summary in `feature_summary_stats.csv`; full shift table in "
+        "`phase1_vs_phase2_shift.csv`.",
         "",
-        "| Column | n | Missing | Mean | Median | Std | Min | Max |",
-        "|---|---:|---:|---:|---:|---:|---:|---:|",
+        "| Column | P1 n | P2 n | P1 mean | P2 mean | Δ mean | P1 median | P2 median | Cohen d |",
+        "|---|---:|---:|---:|---:|---:|---:|---:|---:|",
     ]
-    numeric_t = stats_triage[
-        stats_triage["dtype"].isin(["float64", "int64"])
-    ].head(25)
-    for _, r in numeric_t.iterrows():
-        if pd.isna(r.get("mean")):
+    numeric_t = p2_stats[
+        p2_stats["dtype"].isin(["float64", "int64"])
+    ]
+    numeric_t = numeric_t[numeric_t["mean"].notna()]
+    # Sort by absolute Cohen-d so the biggest changes come first.
+    ordered_cols = []
+    for col in numeric_t.index:
+        if col in shift_lookup.index:
+            ordered_cols.append((col, abs(shift_lookup.at[col, "cohen_d"])
+                                 if pd.notna(shift_lookup.at[col, "cohen_d"])
+                                 else 0.0))
+        else:
+            ordered_cols.append((col, 0.0))
+    ordered_cols.sort(key=lambda kv: -kv[1])
+
+    for col, _ in ordered_cols[:30]:
+        if col not in p1_stats.index or col not in p2_stats.index:
             continue
+        p1_row = p1_stats.loc[col]
+        p2_row = p2_stats.loc[col]
+        m1 = p1_row.get("mean", np.nan)
+        m2 = p2_row.get("mean", np.nan)
+        med1 = p1_row.get("median", np.nan)
+        med2 = p2_row.get("median", np.nan)
+        d = shift_lookup.at[col, "cohen_d"] \
+            if col in shift_lookup.index else np.nan
+        delta = (m2 - m1) if pd.notna(m1) and pd.notna(m2) else np.nan
         md.append(
-            f"| `{r['column']}` | {r['n']} | {r['pct_missing']:.0%} | "
-            f"{r.get('mean', float('nan')):.2f} | "
-            f"{r.get('median', float('nan')):.2f} | "
-            f"{r.get('std', float('nan')):.2f} | "
-            f"{r.get('min', float('nan')):.2f} | "
-            f"{r.get('max', float('nan')):.2f} |"
+            f"| `{col}` | {int(p1_row['n'])} | {int(p2_row['n'])} | "
+            f"{m1:.3f} | {m2:.3f} | "
+            f"{delta:+.3f} | "
+            f"{med1:.2f} | {med2:.2f} | "
+            f"{(f'{d:+.2f}' if pd.notna(d) else '—')} |"
         )
 
     md += [

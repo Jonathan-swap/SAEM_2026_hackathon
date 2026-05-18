@@ -1,0 +1,20 @@
+table,column,phase
+triage,arrival_is_peak_festival_day,P1 only
+triage,arrival_is_weekend,P1 only
+triage,cand_alkalosis,P2 only
+triage,cand_glucose_extreme,P2 only
+triage,cand_is_fast_onset,P2 only
+triage,cand_is_slow_onset,P2 only
+triage,cand_pmh_count,P2 only
+triage,note_location_shopping_area,P2 only
+fourh,arrival_is_peak_festival_day,P1 only
+fourh,arrival_is_weekend,P1 only
+fourh,peak_temp_385plus,P1 only
+fourh,vts_systolic_bp_n_critical,P1 only
+fourh,vts_systolic_bp_time_to_first_critical,P1 only
+fourh,cand_alkalosis,P2 only
+fourh,cand_glucose_extreme,P2 only
+fourh,cand_is_fast_onset,P2 only
+fourh,cand_is_slow_onset,P2 only
+fourh,cand_pmh_count,P2 only
+fourh,note_location_shopping_area,P2 only

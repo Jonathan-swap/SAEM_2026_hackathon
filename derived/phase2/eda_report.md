@@ -80,13 +80,49 @@ Phase-2 arrival-date range: `2026-05-11` → `2026-05-15`
 
 ![missingness](eda_plots/missingness_top30.png)
 
-## Vital-sign distributions — Phase 1 vs Phase 2
+## Density-normalised feature comparisons
+
+All histograms below use density on the y-axis (or proportions for discrete data) so the 261-vs-139 sample-size difference doesn't bias the visual comparison.
+
+### Triage vitals
 
 ![vitals](eda_plots/vitals_distribution.png)
 
-## Triage POC labs — Phase 1 vs Phase 2
+### Triage POC labs
 
 ![labs](eda_plots/labs_distribution.png)
+
+### Past medical history flags
+
+![pmh](eda_plots/pmh_flags.png)
+
+### Demographics + acuity (age, ESI, pain)
+
+![demographics](eda_plots/demographics.png)
+
+### Categorical triage fields (mode of arrival, sex, race, complaint)
+
+![categorical](eda_plots/categorical_triage.png)
+
+### 4-hour reassessment vitals
+
+![fourh-vitals](eda_plots/fourh_reassessment_vitals.png)
+
+### Triage → 4h vital deltas
+
+![deltas](eda_plots/fourh_deltas.png)
+
+### Peak labs (0–4h)
+
+![peak-labs](eda_plots/peak_labs.png)
+
+### ED interventions (0–4h counts/flags)
+
+![interventions](eda_plots/interventions.png)
+
+### Composite candidate features (NEWS, shock index, etc.)
+
+![composites](eda_plots/cand_composites.png)
 
 ## Largest Phase-1 → Phase-2 distribution shifts
 
@@ -97,37 +133,42 @@ Cohen's d ≥ 0.5 indicates a non-trivial shift. d > 0 → Phase-2 mean is highe
 | triage | `arrival_day_of_festival` | 2.36 | 360.50 | +358.15 | +256.39 |
 | fourh | `arrival_day_of_festival` | 2.36 | 360.50 | +358.15 | +256.39 |
 
-## Numeric-feature summary statistics (triage)
+## Numeric-feature summary statistics (triage) — Phase-1 vs Phase-2
 
-Showing only numeric columns with non-missing values; full table in `feature_summary_stats.csv`.
+Side-by-side change per numeric triage feature. Cohen's d > 0 means Phase-2 mean is higher than Phase-1 mean. Full per-phase summary in `feature_summary_stats.csv`; full shift table in `phase1_vs_phase2_shift.csv`.
 
-| Column | n | Missing | Mean | Median | Std | Min | Max |
-|---|---:|---:|---:|---:|---:|---:|---:|
-| `triage_heart_rate` | 139 | 0% | 105.46 | 101.30 | 23.38 | 65.40 | 162.20 |
-| `triage_respiratory_rate` | 139 | 0% | 23.10 | 22.60 | 7.22 | 8.10 | 40.80 |
-| `triage_snapshot.systolic_bp` | 139 | 0% | 116.88 | 117.00 | 15.00 | 81.20 | 163.90 |
-| `triage_snapshot.diastolic_bp` | 139 | 0% | 72.68 | 73.70 | 8.53 | 50.00 | 96.90 |
-| `triage_snapshot.oxygen_saturation` | 139 | 0% | 95.25 | 95.40 | 2.13 | 90.00 | 99.80 |
-| `triage_supplemental_oxygen` | 139 | 0% | 0.37 | 0.00 | 0.48 | 0.00 | 1.00 |
-| `triage_temperature_c` | 139 | 0% | 37.59 | 37.50 | 0.63 | 36.07 | 39.20 |
-| `triage_gcs` | 139 | 0% | 12.29 | 12.00 | 1.87 | 7.00 | 15.00 |
-| `triage_age` | 139 | 0% | 36.41 | 33.00 | 15.37 | 14.00 | 75.00 |
-| `triage_esi` | 139 | 0% | 3.42 | 4.00 | 1.19 | 1.00 | 5.00 |
-| `triage_pain_scale` | 139 | 0% | 5.29 | 5.00 | 2.67 | 0.00 | 10.00 |
-| `triage_mh_psych` | 139 | 0% | 0.22 | 0.00 | 0.42 | 0.00 | 1.00 |
-| `triage_mh_cardiac` | 139 | 0% | 0.19 | 0.00 | 0.39 | 0.00 | 1.00 |
-| `triage_mh_pulm` | 139 | 0% | 0.16 | 0.00 | 0.37 | 0.00 | 1.00 |
-| `triage_mh_renal` | 139 | 0% | 0.12 | 0.00 | 0.33 | 0.00 | 1.00 |
-| `triage_mh_substance_use` | 139 | 0% | 0.19 | 0.00 | 0.40 | 0.00 | 1.00 |
-| `triage_lab_glucose` | 139 | 0% | 114.05 | 112.10 | 21.87 | 70.70 | 169.60 |
-| `triage_lab_ph` | 139 | 0% | 7.36 | 7.36 | 0.05 | 7.24 | 7.46 |
-| `triage_lab_sodium` | 139 | 0% | 138.08 | 137.70 | 3.14 | 130.20 | 145.90 |
-| `triage_lab_potassium` | 139 | 0% | 4.40 | 4.41 | 0.45 | 2.96 | 5.66 |
-| `triage_lab_hemoglobin` | 139 | 0% | 13.75 | 13.70 | 1.63 | 9.30 | 17.70 |
-| `triage_lab_anion_gap` | 139 | 0% | 11.93 | 11.60 | 3.69 | 4.00 | 21.60 |
-| `is_festival_patient` | 139 | 0% | 0.73 | 1.00 | 0.45 | 0.00 | 1.00 |
-| `festival_note_keyword_hit` | 139 | 0% | 0.73 | 1.00 | 0.45 | 0.00 | 1.00 |
-| `arrival_day_of_festival` | 139 | 0% | 360.50 | 361.00 | 1.34 | 358.00 | 362.00 |
+| Column | P1 n | P2 n | P1 mean | P2 mean | Δ mean | P1 median | P2 median | Cohen d |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| `arrival_day_of_festival` | 261 | 139 | 2.356 | 360.504 | +358.147 | 3.00 | 361.00 | +256.39 |
+| `triage_gcs` | 261 | 139 | 12.785 | 12.295 | -0.490 | 13.00 | 12.00 | -0.29 |
+| `triage_supplemental_oxygen` | 261 | 139 | 0.238 | 0.367 | +0.129 | 0.00 | 0.00 | +0.29 |
+| `note_location_other` | 261 | 139 | 0.184 | 0.295 | +0.111 | 0.00 | 0.00 | +0.27 |
+| `cand_news_gcs` | 261 | 139 | 1.690 | 1.921 | +0.231 | 2.00 | 2.00 | +0.23 |
+| `triage_snapshot.systolic_bp` | 261 | 139 | 120.399 | 116.878 | -3.521 | 119.70 | 117.00 | -0.23 |
+| `triage_chief_palpitations` | 261 | 139 | 0.115 | 0.050 | -0.065 | 0.00 | 0.00 | -0.22 |
+| `cand_map` | 261 | 139 | 89.078 | 87.416 | -1.662 | 89.20 | 87.10 | -0.21 |
+| `cand_shock_index` | 261 | 139 | 0.871 | 0.923 | +0.052 | 0.82 | 0.89 | +0.21 |
+| `cand_mod_shock_index` | 261 | 139 | 1.168 | 1.220 | +0.052 | 1.11 | 1.18 | +0.17 |
+| `cand_pulse_pressure` | 261 | 139 | 46.981 | 44.193 | -2.788 | 47.60 | 43.10 | -0.16 |
+| `cand_news_hr` | 261 | 139 | 1.088 | 1.252 | +0.164 | 1.00 | 1.00 | +0.15 |
+| `cand_news_total` | 261 | 139 | 5.701 | 6.367 | +0.666 | 4.00 | 6.00 | +0.15 |
+| `triage_hr_above_120` | 261 | 139 | 0.218 | 0.281 | +0.062 | 0.00 | 0.00 | +0.15 |
+| `cand_news_sbp` | 261 | 139 | 0.379 | 0.482 | +0.103 | 0.00 | 0.00 | +0.14 |
+| `cand_k_extreme` | 261 | 139 | 0.138 | 0.094 | -0.044 | 0.00 | 0.00 | -0.14 |
+| `cand_news_high_risk` | 261 | 139 | 0.494 | 0.561 | +0.067 | 0.00 | 1.00 | +0.13 |
+| `cand_onset_x_hr` | 200 | 109 | 1.329 | 1.158 | -0.172 | 0.84 | 0.78 | -0.13 |
+| `cand_onset_x_news` | 200 | 109 | 0.091 | 0.075 | -0.015 | 0.04 | 0.05 | -0.13 |
+| `triage_mh_substance_use` | 261 | 139 | 0.249 | 0.194 | -0.055 | 0.00 | 0.00 | -0.13 |
+| `triage_ph_above_735` | 261 | 139 | 0.617 | 0.554 | -0.063 | 1.00 | 1.00 | -0.13 |
+| `cand_acidosis` | 261 | 139 | 0.383 | 0.446 | +0.063 | 0.00 | 0.00 | +0.13 |
+| `triage_mh_pulm` | 261 | 139 | 0.207 | 0.158 | -0.049 | 0.00 | 0.00 | -0.12 |
+| `triage_ag_above_20` | 261 | 139 | 0.034 | 0.014 | -0.020 | 0.00 | 0.00 | -0.12 |
+| `note_location_main_stage` | 261 | 139 | 0.245 | 0.194 | -0.051 | 0.00 | 0.00 | -0.12 |
+| `triage_glucose_above_140` | 261 | 139 | 0.157 | 0.115 | -0.042 | 0.00 | 0.00 | -0.12 |
+| `triage_heart_rate` | 261 | 139 | 102.796 | 105.456 | +2.660 | 98.70 | 101.30 | +0.11 |
+| `cand_hr_temp_product` | 261 | 139 | 3873.837 | 3976.421 | +102.584 | 3667.66 | 3807.09 | +0.11 |
+| `note_word_count` | 261 | 139 | 13.284 | 13.568 | +0.285 | 13.00 | 14.00 | +0.11 |
+| `cand_log_onset` | 200 | 109 | 4.724 | 4.792 | +0.068 | 4.84 | 4.95 | +0.10 |
 
 ## Files
 
