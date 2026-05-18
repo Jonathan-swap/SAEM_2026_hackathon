@@ -194,6 +194,35 @@ Pass criterion: the class-conditional fractions for `pe_diaphoretic`,
 (29% / 10% / 4% Kraken / Triton / Coral for `pe_diaphoretic`).
 This is your reproducibility check.
 
+### 6.2. Task-2 leakage verification (optional, recommended)
+
+Before trusting Task-2's high AUC, verify the disposition outcome
+isn't leaking back in as a feature:
+
+```powershell
+.venv\Scripts\python.exe src\eda\check_task2_leakage.py
+```
+
+Four checks run automatically:
+
+1. `encounter_disposition_label` IS in `features_fourh.csv` (correct
+   — the trainer reads it as target) but **is removed by
+   `load_data()` before reaching X**.
+2. No alias columns (no `discharge`/`floor`/`icu`/`disposition`/
+   `admit` tokens anywhere in `X.columns`).
+3. `ground_truth_drug*` (the drug-class label) is also removed.
+4. MI scan: every feature's MI vs the disposition target is
+   computed. The reference MI(target ↔ target) gives a ceiling
+   (~0.69 for the 3-class drug-positive cohort). A leak threshold
+   of `0.85 × reference` flags features that are essentially the
+   target by another name.
+
+Pass criterion: `OK Task-2 training cannot see the disposition
+outcome` (exit code 0). Current state: top feature MI = 0.449
+(65% of ceiling) — strong legitimate clinical predictors like
+`vts_heart_rate_mean`, `vts_temperature_c_mean`, `vts_gcs_mean`.
+**Zero features cross the leak threshold.**
+
 ---
 
 ## 7. Train + evaluate Task 1 (drug ID at triage)
@@ -210,13 +239,29 @@ the manual ground truth + v6 features:
 Three models (logreg, rforest, hgb). Artifacts:
 `derived/task1_baseline_summary.csv` + `task1_oof_predictions.csv`.
 
-| Model | log-loss | accuracy | macro AUC |
-|-------|---------:|---------:|----------:|
-| logreg | 1.91 | 0.37 | 0.63 |
-| **rforest** | **1.23** | **0.44** | **0.70** |
-| hgb | 1.98 | 0.45 | 0.64 |
+| Model | log-loss | accuracy | macro ROC-AUC | macro PR-AUC |
+|-------|---------:|---------:|--------------:|-------------:|
+| logreg | 1.91 | 0.37 | 0.625 | 0.384 |
+| **rforest** | **1.23** | **0.44** | **0.695** | **0.456** |
+| hgb | 1.98 | 0.45 | 0.642 | 0.406 |
 
-Majority-class baseline accuracy = 0.40.
+Majority-class baseline accuracy = 0.40. Class prevalence:
+None 0.40 / Kraken 0.22 / Triton 0.20 / Coral 0.18.
+
+**Per-class metrics for rforest** (OVR = one-vs-rest):
+
+| Class | Prevalence | ROC-AUC | PR-AUC | Brier | BSS |
+|---|---:|---:|---:|---:|---:|
+| None | 0.40 | 0.732 | 0.616 | 0.213 | **+0.113** |
+| Kraken | 0.22 | 0.603 | 0.339 | 0.173 | −0.005 |
+| Triton | 0.20 | 0.743 | 0.457 | 0.144 | **+0.085** |
+| Coral | 0.18 | 0.703 | 0.411 | 0.143 | **+0.053** |
+
+Task-1 BSS is near zero or slightly negative for the drug classes
+— rforest barely beats predicting the marginal prevalence. The
+0.70 macro AUC is real but small: triage-only text fundamentally
+lacks Triton/Coral signal (their defining tokens —
+"ringing in ears", "time distortion" — appear post-triage only).
 
 ### 7b. Temporal holdout (train on early days, test on last day) — **deployment-relevant**
 
@@ -234,14 +279,22 @@ Artifacts (Task 1): `derived/task1_temporal_summary.csv`
 + `task1_temporal_predictions.csv` + section 1 of
 `temporal_holdout_report.md`.
 
-| Model | log-loss | accuracy | macro AUC |
-|-------|---------:|---------:|----------:|
-| logreg | 1.62 | 0.36 | 0.61 |
-| **rforest** | **1.21** | **0.41** | **0.69** |
-| hgb | 2.02 | 0.42 | 0.62 |
+| Model | log-loss | accuracy | macro ROC-AUC | macro PR-AUC |
+|-------|---------:|---------:|--------------:|-------------:|
+| logreg | 2.16 | 0.35 | 0.600 | 0.358 |
+| **rforest** | **1.22** | **0.42** | **0.691** | **0.413** |
+| hgb | 1.70 | 0.43 | 0.685 | 0.418 |
 
-Holdout AUC ≈ CV AUC — the Task-1 ceiling is data-bound (triage
-features simply don't contain Triton/Coral signal). See
+**Per-class metrics for rforest (holdout):**
+
+| Class | Prevalence | ROC-AUC | PR-AUC | Brier | BSS |
+|---|---:|---:|---:|---:|---:|
+| None | 0.39 | 0.704 | 0.639 | 0.211 | **+0.114** |
+| Kraken | 0.32 | 0.629 | 0.474 | 0.218 | +0.006 |
+| Triton | 0.16 | 0.739 | 0.320 | 0.128 | **+0.057** |
+| Coral | 0.12 | 0.691 | 0.221 | 0.112 | −0.046 |
+
+Holdout AUC ≈ CV AUC — the Task-1 ceiling is data-bound. See
 `research/03_v6_feature_evaluation.md`.
 
 ---
@@ -264,11 +317,21 @@ Artifacts (WITH-probs variant overrides):
 
 Clinical-only variant:
 
-| Model | log-loss | accuracy | macro AUC | AUC disp / floor / ICU |
-|-------|---------:|---------:|----------:|-----------------------:|
-| logreg | 0.41 | 0.91 | 0.89 | 0.90 / 0.91 / 0.86 |
-| **rforest** | **0.34** | **0.91** | **0.93** | 0.93 / 0.94 / 0.91 |
-| hgb | 0.64 | 0.82 | 0.87 | 0.90 / 0.85 / 0.87 |
+| Model | log-loss | accuracy | macro ROC-AUC | macro PR-AUC |
+|-------|---------:|---------:|--------------:|-------------:|
+| logreg | 0.41 | 0.91 | 0.888 | 0.830 |
+| **rforest** | **0.35** | **0.91** | **0.927** | **0.895** |
+| hgb | 0.64 | 0.82 | 0.879 | 0.702 |
+
+Class prevalence: Discharge 0.77 / Floor 0.14 / ICU 0.09.
+
+**Per-class metrics for rforest:**
+
+| Class | Prevalence | ROC-AUC | PR-AUC | Brier | BSS |
+|---|---:|---:|---:|---:|---:|
+| Discharge | 0.77 | 0.933 | 0.966 | 0.066 | **+0.624** |
+| Floor | 0.14 | 0.934 | 0.834 | 0.061 | **+0.483** |
+| ICU | 0.09 | 0.915 | 0.887 | 0.032 | **+0.613** |
 
 ### 8b. Temporal holdout — **deployment-relevant**
 
@@ -284,17 +347,30 @@ Artifacts (Task 2): `derived/task2_temporal_summary.csv` +
 `task2_temporal_predictions.csv` + section 2 of
 `temporal_holdout_report.md`.
 
-| Model | log-loss | accuracy | macro AUC | AUC disp / floor / ICU |
-|-------|---------:|---------:|----------:|-----------------------:|
-| logreg | 0.32 | 0.89 | **0.96** | 0.97 / 0.98 / 0.92 |
-| **rforest** | **0.32** | **0.89** | **0.98** | **0.99 / 0.95 / 1.00** |
-| hgb | 0.59 | 0.87 | 0.87 | 0.92 / 0.80 / 0.88 |
+| Model | log-loss | accuracy | macro ROC-AUC | macro PR-AUC |
+|-------|---------:|---------:|--------------:|-------------:|
+| logreg | 0.32 | 0.89 | 0.957 | 0.884 |
+| **rforest** | **0.32** | **0.89** | **0.985** | **0.952** |
+| hgb | 0.58 | 0.87 | 0.869 | 0.653 |
 
-Task 2 holdout AUC of **0.982** is the headline number. The
-severity-anchored features (peak_lactate, peak_CPK, peak_troponin,
-peak_HR, peak_temp) transfer cleanly from training days to the
-peak festival day; no degradation from CV. Per-class AUC for ICU
-hits 1.00 on the holdout — the model recovers every ICU case.
+Test-set class prevalence: Discharge 0.73 / Floor 0.16 / ICU 0.11.
+
+**Per-class metrics for rforest (holdout) — headline numbers:**
+
+| Class | Prevalence | ROC-AUC | PR-AUC | Brier | BSS |
+|---|---:|---:|---:|---:|---:|
+| Discharge | 0.73 | 0.992 | 0.997 | 0.053 | **+0.730** |
+| Floor | 0.16 | 0.962 | 0.858 | 0.070 | **+0.467** |
+| ICU | 0.11 | **1.000** | **1.000** | 0.038 | **+0.617** |
+
+Task-2 holdout rforest hits **0.985 macro ROC-AUC and 0.952 macro
+PR-AUC** on the peak festival day. ICU-class ROC-AUC and PR-AUC
+both hit **1.00** — every ICU case in the test set ranks above
+every non-ICU case. All three BSS values are firmly positive
+(+0.47 to +0.73): the model beats climatology by roughly half of
+the theoretical maximum improvement. The severity-anchored
+features (peak_lactate, peak_CPK, peak_troponin, peak_HR,
+peak_temp) transfer cleanly from training days to the holdout.
 
 ---
 
@@ -460,7 +536,11 @@ src/
                                  agents/agent_01..10 + PROMPTS.md (v6-aligned)
   eda/                         ← eda_descriptive.py, eda_advanced.py,
                                  check_time_horizons.py,
-                                 eda_v6_features.py (NEW)
+                                 eda_v6_features.py,
+                                 check_task2_leakage.py (verifies
+                                   Task-2 does NOT use disposition
+                                   as a feature; MI scan, alias
+                                   scan, target-removal proof)
   task1_drug_id/               ← train_baseline.py (Task 1)
   task2_deterioration/         ← train_baseline.py (Task 2)
   task3_rapid_tool/            ← triage_calculator.html (Task 3)
