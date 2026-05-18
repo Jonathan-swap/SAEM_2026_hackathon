@@ -3,10 +3,14 @@
 Two clustering runs, each mirroring the cohort and feature set of
 one supervised model:
 
-- **Task 1 clustering**: all 261 encounters, features_triage.csv
-  (triage-horizon features only), n_clusters=4 (3 drugs + None).
-  Expected match: KMeans clusters track ground_truth_drug_name
-  (None / Kraken / Triton / Coral).
+- **Task 1 clustering** (this branch, unsupervised mode):
+  all 261 encounters, features_triage.csv (triage-horizon features
+  only), n_clusters=**5**. The 5 clusters are the new outcome
+  categories — no supervised truth label is asserted. The drug
+  class (None / Kraken / Triton / Coral) is reported as an
+  informational cross-tab but NOT used to evaluate the clusters
+  (ARI/NMI are printed for context only; the algorithm is targeting
+  5 clusters, the supervised label only has 4 values).
 - **Task 2 clustering**: 157 drug-positive encounters
   (ground_truth_drug != 0), features_fourh.csv (4h horizon),
   n_clusters=3 (the 3 drugs). Mirrors the Task-2 baseline cohort
@@ -97,6 +101,8 @@ def cluster_one(
     truth_col: str = "ground_truth_drug_name",
     truth_classes: list[str] | None = None,
     extra_label_col: str | None = None,
+    unsupervised_mode: bool = False,
+    top_features_per_cluster: int = 12,
 ) -> dict:
     """One task-aligned clustering run.
 
@@ -119,6 +125,14 @@ def cluster_one(
             truth panel of the PCA scatter.
         extra_label_col: optional secondary column from features_path
             to cross-tab against.
+        unsupervised_mode: if True, treat the clusters as the outcome
+            and don't rely on truth_col for evaluation. ARI/NMI vs
+            truth are still computed as informational only; the
+            primary outputs are cluster sizes, BIC, GMM entropy, and
+            **per-cluster centroid feature loadings** (top distinguishing
+            features by absolute z-score in the standardised space).
+        top_features_per_cluster: how many distinguishing features to
+            print per cluster when in unsupervised_mode.
     """
     print(f"\n{'='*72}\nClustering — {name}\n{'='*72}")
     df = pd.read_csv(features_path)
@@ -355,10 +369,50 @@ def cluster_one(
     nmi_km = normalized_mutual_info_score(truth, km_labels)
     ari_gmm = adjusted_rand_score(truth, gmm_labels)
     nmi_gmm = normalized_mutual_info_score(truth, gmm_labels)
-    print(f"\n  KMeans  vs {truth_col}: "
+    tag = " (informational — unsupervised mode)" if unsupervised_mode else ""
+    print(f"\n  KMeans  vs {truth_col}{tag}: "
           f"ARI = {ari_km:.3f}   NMI = {nmi_km:.3f}")
-    print(f"  GMM     vs {truth_col}: "
+    print(f"  GMM     vs {truth_col}{tag}: "
           f"ARI = {ari_gmm:.3f}   NMI = {nmi_gmm:.3f}")
+
+    # ---- Centroid feature loadings (unsupervised mode) -------------------
+    # Each cluster's centroid in the standardised space IS a z-score
+    # vector vs the global mean. Features with the largest absolute
+    # values are what distinguishes that cluster — same idea as PCA
+    # loadings but per-cluster.
+    feature_names = X_df.columns.tolist()
+    centroid_loadings: dict[int, list[tuple[str, float]]] = {}
+    for k in range(n_kmeans):
+        c = km.cluster_centers_[k]
+        ranked = sorted(
+            zip(feature_names, c),
+            key=lambda kv: abs(kv[1]), reverse=True,
+        )[:top_features_per_cluster]
+        centroid_loadings[int(k)] = [(f, float(v)) for f, v in ranked]
+
+    if unsupervised_mode:
+        print(f"\n  Centroid feature loadings (z-score vs global "
+              f"mean; top {top_features_per_cluster} per cluster):")
+        for k in sorted(centroid_loadings.keys()):
+            n_members = int((km_labels == k).sum())
+            print(f"    cluster {k} (n={n_members:>3d}):")
+            for f, v in centroid_loadings[k]:
+                arrow = "++" if v > 0 else "--"
+                print(f"      {arrow} {f:<40s} {v:+.3f}")
+
+        # Persist the loadings for downstream consumers.
+        loadings_rows = []
+        for k, items in centroid_loadings.items():
+            for rank, (feat, z) in enumerate(items, start=1):
+                loadings_rows.append({
+                    "cluster": k,
+                    "rank": rank,
+                    "feature": feat,
+                    "z_score": z,
+                })
+        loadings_path = DERIVED / f"cluster_centroid_loadings_{name}.csv"
+        pd.DataFrame(loadings_rows).to_csv(loadings_path, index=False)
+        print(f"  Centroid loadings -> {loadings_path}")
 
     # ---- Print full candidate-label distribution per cluster ----
     # Every ground-truth class with its within-cluster fraction,
@@ -418,17 +472,21 @@ def main() -> None:
     print(f"  disposition:   "
           f"{gt['encounter_disposition_label'].value_counts().to_dict()}")
 
-    # Task 1 — all 261 encounters, triage features, 4 expected clusters
-    # (None + 3 drugs). Truth = drug class.
+    # Task 1 — all 261 encounters, triage features, **5 unsupervised
+    # clusters**. The clusters themselves are the outcome categories
+    # in this branch; ground_truth_drug_name (4 values) is reported
+    # as an informational cross-tab but not used to evaluate the
+    # clustering.
     res_t1 = cluster_one(
         name="task1",
         features_path=DERIVED / "features_triage.csv",
         ground_truth=gt,
         cohort_filter=None,
-        n_kmeans=4,
+        n_kmeans=5,
         truth_col="ground_truth_drug_name",
         truth_classes=DRUG_CLASSES,
         extra_label_col=None,
+        unsupervised_mode=True,
     )
 
     # Task 2 — drug-positive cohort, 4h features, 3 expected clusters.
