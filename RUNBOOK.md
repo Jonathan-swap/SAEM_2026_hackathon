@@ -266,6 +266,51 @@ outcome` (exit code 0). Current state: top feature MI = 0.449
 Triton Tabs, Coral Dust}. Sourced from `outcomes.csv` (which in turn
 sources from `Task1_Two_Tier_Input_Data.csv`).
 
+### Four architectures (all retained as options)
+
+| § | Architecture | Predicts | Cohort | Train script |
+|---|---|---|---|---|
+| **7a / 7b** | Direct 4-class | None / Kraken / Triton / Coral | all 261 | `src/task1_drug_id/train_baseline.py` |
+| **7c** | Tier-1 binary | drug / no-drug | all 261 | `src/task1_drug_id/train_binary.py` |
+| **7d** | Tier-2 multiclass | Kraken / Triton / Coral (given drug+) | 157 drug-positive | `src/task1_drug_id/train_tier2.py` |
+| **7e** | **Cascade** (tier-1 × tier-2 → 4-class) | None / Kraken / Triton / Coral | all 261 (via cascade) | `src/task1_drug_id/compare_cascade.py` |
+
+### Headline results — all four architectures
+
+**Temporal holdout (last day = test, n=74 for 4-class/binary;
+n=45 for tier-2; rforest unless marked):**
+
+| Architecture | Best model | macro ROC-AUC | macro PR-AUC | accuracy |
+|---|---|---:|---:|---:|
+| Direct 4-class | rforest | 0.697 | 0.408 | 0.392 |
+| Tier-1 binary | rforest | 0.717 (ROC-AUC) | 0.791 (PR-AUC) | 0.649 |
+| Tier-2 (3 drugs only) | **hgb** | 0.678 | 0.536 | 0.556 |
+| **Cascade** | rforest | **0.712** | **0.449** | **0.460** |
+
+**5-fold CV (n=261 except tier-2 = 157):**
+
+| Architecture | Best model | macro ROC-AUC | macro PR-AUC | accuracy |
+|---|---|---:|---:|---:|
+| Direct 4-class | rforest | 0.695 | 0.456 | 0.440 |
+| Tier-1 binary | rforest | 0.730 (ROC-AUC) | 0.820 (PR-AUC) | 0.700 |
+| Tier-2 (3 drugs only) | rforest | 0.709 | 0.591 | 0.528 |
+| **Cascade** | rforest | 0.676 | 0.379 | 0.475 |
+
+Notes on comparing these numbers:
+- **Direct vs Cascade** are directly comparable — both predict all
+  four classes on all 261 patients. **Cascade is the deployment
+  recommendation** (see §7e for the head-to-head analysis).
+- **Tier-1 binary** is a 2-class problem (60% prevalence) — its
+  ROC-AUC and PR-AUC are not on the same scale as the 4-class
+  numbers. Useful as a screening test ("is there ANY drug?") and
+  as the first stage of the cascade.
+- **Tier-2** runs on 157 drug-positive patients only (3 classes,
+  ~37/32/31% K/T/C). Pairs with tier-1 in the cascade and is also
+  the natural input to the Task-3 triage calculator's "most likely
+  drug" card.
+
+### Common context
+
 Two evaluation modes are available, both leakage-clean and using
 the manual ground truth + v6 features:
 
