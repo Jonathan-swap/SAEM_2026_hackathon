@@ -5,7 +5,8 @@
     "0": "None",
     "1": "Kraken Candy",
     "2": "Triton Tabs",
-    "3": "Coral Dust"
+    "3": "Coral Dust",
+    "4": "Siren Spark"
   },
   "tau_drug": 0.57,
   "tau_kraken": 0.5,
@@ -102,7 +103,8 @@
     104,
     58,
     51,
-    48
+    48,
+    0
   ],
   "rforest_hyperparams": {
     "n_estimators": 400,
@@ -112,8 +114,62 @@
     "random_state": 42
   },
   "threshold_picking": "tau_drug and tau_kraken were picked on 5-fold OOF (threshold_cascade_b.py) under the macro-F1 criterion and are FROZEN here \u2014 they are not re-picked at the 100% retrain.",
+  "siren_alpha": 0.2,
+  "siren_sharpness": 1.0,
+  "siren_cap": 0.5,
+  "siren_f_baseline": 0.798,
+  "siren_f_gate": 0.05,
+  "siren_clinical_features": [
+    "triage_heart_rate",
+    "triage_respiratory_rate",
+    "triage_snapshot.systolic_bp",
+    "triage_snapshot.diastolic_bp",
+    "triage_snapshot.oxygen_saturation",
+    "triage_temperature_c",
+    "triage_gcs",
+    "triage_age",
+    "triage_lab_glucose",
+    "triage_lab_ph",
+    "triage_lab_sodium",
+    "triage_lab_potassium",
+    "triage_lab_anion_gap",
+    "triage_lab_hemoglobin"
+  ],
+  "siren_ref_mean": {
+    "triage_heart_rate": 102.79578544061303,
+    "triage_respiratory_rate": 23.08390804597701,
+    "triage_snapshot.systolic_bp": 120.39885057471264,
+    "triage_snapshot.diastolic_bp": 73.4176245210728,
+    "triage_snapshot.oxygen_saturation": 95.45134099616858,
+    "triage_temperature_c": 37.56379310344828,
+    "triage_gcs": 12.78544061302682,
+    "triage_age": 36.88505747126437,
+    "triage_lab_glucose": 112.30229885057472,
+    "triage_lab_ph": 7.363015325670498,
+    "triage_lab_sodium": 137.79540229885058,
+    "triage_lab_potassium": 4.390842911877394,
+    "triage_lab_anion_gap": 11.659003831417625,
+    "triage_lab_hemoglobin": 13.891187739463602
+  },
+  "siren_ref_std": {
+    "triage_heart_rate": 23.462802423278152,
+    "triage_respiratory_rate": 7.170702254471396,
+    "triage_snapshot.systolic_bp": 15.827496723104822,
+    "triage_snapshot.diastolic_bp": 8.470818443611407,
+    "triage_snapshot.oxygen_saturation": 2.3493796486039438,
+    "triage_temperature_c": 0.6510079310269172,
+    "triage_gcs": 1.5762475819898514,
+    "triage_age": 14.37044934313494,
+    "triage_lab_glucose": 24.04792959428905,
+    "triage_lab_ph": 0.054455484243742185,
+    "triage_lab_sodium": 2.981322939929276,
+    "triage_lab_potassium": 0.4777584462055267,
+    "triage_lab_anion_gap": 3.965248726797586,
+    "triage_lab_hemoglobin": 1.4784213667609296
+  },
+  "siren_note": "5-class output adds Siren Spark (idx 4) as a soft probability. Phase-1 training has no Siren ground truth; p_siren is computed from cascade uncertainty + clinical-feature anomaly vs Phase-1 reference. See src/task1_drug_id/train_production.py for the recipe.",
   "sklearn_version": "1.8.0",
   "numpy_version": "2.4.4",
   "python": "3.13.11",
-  "fitted_utc": "2026-05-18T17:01:27Z"
+  "fitted_utc": "2026-05-18T18:43:32Z"
 }

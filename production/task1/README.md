@@ -1,7 +1,7 @@
 # Task-1 production model (Cascade-B, rforest)
 
 Trained on **100% of the dataset** (n=261 encounters,
-class counts [104, 58, 51, 48]). Picked decision thresholds frozen
+class counts [104, 58, 51, 48, 0]). Picked decision thresholds frozen
 from the macro-F1 optimum on 5-fold OOF — they are NOT re-picked at the
 100% retrain, because doing so would optimistically bias the deployment.
 
@@ -55,6 +55,6 @@ python production/predict.py path/to/features_triage.csv path/to/out.csv
 - Python: `3.13.11`
 - scikit-learn: `1.8.0`
 - numpy: `2.4.4`
-- Fitted: `2026-05-18T17:01:27Z`
+- Fitted: `2026-05-18T18:43:32Z`
 - Feature columns hash: `e155a51a7ed5d127d78b3e0d399e9dcb` (sha-style fingerprint
   of the `feature_columns` list; use it to detect schema drift in new data)

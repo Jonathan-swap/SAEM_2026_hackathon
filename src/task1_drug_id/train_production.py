@@ -54,8 +54,9 @@ ROOT = Path(__file__).resolve().parents[2]
 DERIVED = ROOT / "derived"
 PRODUCTION = ROOT / "production" / "task1"
 
-CLASS_NAMES = ["None", "Kraken Candy", "Triton Tabs", "Coral Dust"]
-NONE_IDX, KRAKEN_IDX, TRITON_IDX, CORAL_IDX = 0, 1, 2, 3
+CLASS_NAMES = ["None", "Kraken Candy", "Triton Tabs", "Coral Dust",
+                "Siren Spark"]
+NONE_IDX, KRAKEN_IDX, TRITON_IDX, CORAL_IDX, SIREN_IDX = 0, 1, 2, 3, 4
 
 TEXT_COL = "triage_brief_note"
 
@@ -70,6 +71,54 @@ TEXT_COL = "triage_brief_note"
 # or training distribution materially changes.
 TAU_DRUG = 0.57
 TAU_KRAKEN = 0.50
+
+# Siren-Spark (5th-class, Phase-2 only) detection. There is no ground
+# truth for Siren Spark in Phase-1, so the 4-class cascade is unchanged
+# and the 5th class is added as a soft probability on top using the
+# v7 ensemble's α-blend of:
+#   U = 1 - max(p_4class)           (cascade uncertainty signal)
+#   F = mean |z| of clinical        (feature-anomaly signal vs Phase-1
+#       features, clipped to [0,1])  reference; high = unlike anything
+#                                     in Phase-1)
+#   p_siren_raw = α·U + (1-α)·F
+#   p_siren     = clip(sharpness · p_siren_raw, 0, cap)
+#   p_4class'   = (1 - p_siren) · p_4class           (renormalise)
+# Defaults are F-dominated (lower α than v7 agent #1) because empirical
+# inspection showed cascade uncertainty U is ~0.47 on BOTH phases —
+# making it a poor Siren discriminator on its own. The hard Siren
+# LABEL is also gated by SIREN_F_GATE so only encounters whose
+# clinical features are truly anomalous vs the Phase-1 reference can
+# be re-classified to Siren; the soft p_siren_spark column still
+# carries the full U-weighted signal for downstream use.
+SIREN_ALPHA = 0.2
+SIREN_SHARPNESS = 1.0
+SIREN_CAP = 0.50
+SIREN_F_GATE = 0.05
+
+# Clinical signals used to compute F (the feature-anomaly score). These
+# are the 8 vitals + 6 POC labs that drive the cascade and that have a
+# stable physiologic interpretation.
+SIREN_CLINICAL_FEATURES = [
+    "triage_heart_rate",
+    "triage_respiratory_rate",
+    "triage_snapshot.systolic_bp",
+    "triage_snapshot.diastolic_bp",
+    "triage_snapshot.oxygen_saturation",
+    "triage_temperature_c",
+    "triage_gcs",
+    "triage_age",
+    "triage_lab_glucose",
+    "triage_lab_ph",
+    "triage_lab_sodium",
+    "triage_lab_potassium",
+    "triage_lab_anion_gap",
+    "triage_lab_hemoglobin",
+]
+
+# Baseline |z| for a multivariate-standard-normal row is sqrt(2/π) ≈
+# 0.798. Subtracting this centres F at 0 for "typical Phase-1
+# patients" before clipping.
+SIREN_F_BASELINE = 0.798
 
 
 def load_features_and_y() -> tuple[pd.DataFrame, np.ndarray, np.ndarray]:
@@ -124,22 +173,39 @@ def make_rforest() -> RandomForestClassifier:
 
 
 def write_predict_script(production_dir: Path) -> None:
-    """Tiny stand-alone inference script. No external imports beyond
-    joblib + pandas + numpy + sklearn (matched by metadata.json)."""
-    code = '''"""Stand-alone Task-1 cascade inference.
+    """Tiny stand-alone inference script. 5-class output: extends the
+    4-class Cascade-B with a Siren-Spark column built from cascade
+    uncertainty + feature-anomaly vs Phase-1 reference."""
+    code = '''"""Stand-alone Task-1 cascade inference (5-class with Siren Spark).
 
-Loads the artifacts in this directory and produces a 4-class drug
-prediction (0=None / 1=Kraken / 2=Triton / 3=Coral) for one or more
-encounters in the same feature shape used at training time.
+Loads the artifacts in this directory and produces a 5-class drug
+prediction for one or more encounters in the same feature shape used
+at training time.
+
+Classes (0..4):
+  0  None
+  1  Kraken Candy
+  2  Triton Tabs
+  3  Coral Dust
+  4  Siren Spark  (novel-class, Phase-2 only)
+
+For Phase-1 encounters (where the 4-class cascade is the ground truth
+target) p_siren_spark should stay near zero. For Phase-2 encounters
+that look unlike anything in Phase-1, p_siren_spark rises and the
+4-class mass is renormalised down by (1 - p_siren).
 
 Usage (Python):
-    from production.predict import load_model, predict
+    from production.task1.predict import load_model, predict
     model = load_model()
-    df = pd.read_csv("derived/features_triage.csv")   # same schema
-    preds = predict(model, df)   # DataFrame with encounter_id + drug_class
+    df = pd.read_csv("derived/phase2/features_triage.csv")
+    preds = predict(model, df)
+        # columns: encounter_id, drug_class (0-4),
+        #          p_drug, p_kraken_given_drug,
+        #          p_none, p_kraken, p_triton, p_coral, p_siren_spark,
+        #          siren_U, siren_F   (diagnostics)
 
 CLI:
-    python production/predict.py path/to/features_triage.csv \\
+    python production/task1/predict.py path/to/features_triage.csv \\
         path/to/out_predictions.csv
 """
 from __future__ import annotations
@@ -153,7 +219,7 @@ import joblib
 import numpy as np
 import pandas as pd
 
-NONE_IDX, KRAKEN_IDX, TRITON_IDX, CORAL_IDX = 0, 1, 2, 3
+NONE_IDX, KRAKEN_IDX, TRITON_IDX, CORAL_IDX, SIREN_IDX = 0, 1, 2, 3, 4
 HERE = Path(__file__).resolve().parent
 
 
@@ -173,21 +239,61 @@ def load_model(production_dir: Path = HERE) -> dict:
         "tau_kraken":   float(meta["tau_kraken"]),
         "triton_prev":  float(meta["triton_prev"]),
         "feature_cols": list(meta["feature_columns"]),
+        "siren_alpha":     float(meta.get("siren_alpha", 0.2)),
+        "siren_sharpness": float(meta.get("siren_sharpness", 1.0)),
+        "siren_cap":       float(meta.get("siren_cap", 0.50)),
+        "siren_f_baseline":float(meta.get("siren_f_baseline", 0.798)),
+        "siren_f_gate":    float(meta.get("siren_f_gate", 0.05)),
+        "siren_clinical_features":
+            list(meta.get("siren_clinical_features", [])),
+        "siren_ref_mean":  dict(meta.get("siren_ref_mean", {})),
+        "siren_ref_std":   dict(meta.get("siren_ref_std", {})),
         "metadata":     meta,
     }
 
 
+def _feature_anomaly_F(X_full: pd.DataFrame, model: dict) -> np.ndarray:
+    """Mean |z-score| of clinical vitals + labs vs the Phase-1
+    reference distribution, baseline-subtracted and clipped to [0,1].
+
+    F ≈ 0 for typical Phase-1 patients; F → 1 for encounters whose
+    clinical signature is far from any Phase-1 archetype.
+    """
+    feats = model["siren_clinical_features"]
+    if not feats:
+        return np.zeros(len(X_full), dtype=float)
+    zs = np.zeros((len(X_full), len(feats)), dtype=float)
+    for j, c in enumerate(feats):
+        if c not in X_full.columns:
+            continue
+        s = pd.to_numeric(X_full[c], errors="coerce")
+        mu = model["siren_ref_mean"].get(c, float(s.mean()))
+        sd = model["siren_ref_std"].get(c, float(s.std(ddof=1)) or 1.0)
+        if not np.isfinite(sd) or sd <= 0:
+            sd = 1.0
+        zs[:, j] = np.where(
+            s.notna().to_numpy(),
+            (s.to_numpy() - mu) / sd,
+            0.0,
+        )
+    mean_abs_z = np.abs(zs).mean(axis=1)
+    F = mean_abs_z - model["siren_f_baseline"]
+    return np.clip(F, 0.0, 1.0)
+
+
 def predict(model: dict, X: pd.DataFrame) -> pd.DataFrame:
-    """Returns DataFrame with encounter_id + drug_class + all 4 probs."""
+    """Returns DataFrame with encounter_id + drug_class (0..4) + soft
+    probabilities + diagnostic Siren signals."""
     if "encounter_id" not in X.columns:
         raise ValueError("X must contain an encounter_id column")
     encounter_ids = X["encounter_id"].astype(str).to_numpy()
+
+    # Build the feature matrix for the cascade.
     drop = [c for c in ("encounter_id", "encounter_arrival_date",
                           "ground_truth_drug", "ground_truth_drug_name",
                           "encounter_disposition_label")
              if c in X.columns]
     Xf = X.drop(columns=drop)
-    # Re-order columns to match what the preprocessor saw at fit time.
     missing = [c for c in model["feature_cols"] if c not in Xf.columns]
     if missing:
         print(f"WARNING: {len(missing)} feature(s) missing from input "
@@ -207,8 +313,24 @@ def predict(model: dict, X: pd.DataFrame) -> pd.DataFrame:
     p_K = p_drug * p_kraken
     p_T = p_drug * (1.0 - p_kraken) * prev
     p_C = p_drug * (1.0 - p_kraken) * (1.0 - prev)
+    p4 = np.stack([p_none, p_K, p_T, p_C], axis=1)
 
-    # Hard cascade label using the frozen thresholds.
+    # Siren signals: U = cascade uncertainty, F = feature anomaly.
+    U = 1.0 - p4.max(axis=1)
+    F = _feature_anomaly_F(X, model)
+    a = model["siren_alpha"]
+    p_siren_raw = a * U + (1.0 - a) * F
+    p_siren = np.clip(model["siren_sharpness"] * p_siren_raw,
+                       0.0, model["siren_cap"])
+
+    # Renormalise the 4-class mass.
+    scale = (1.0 - p_siren)
+    p_none, p_K, p_T, p_C = (p_none * scale, p_K * scale,
+                              p_T * scale, p_C * scale)
+
+    # Hard label = argmax over 5 classes, but keep the existing
+    # threshold-based 4-class decision when p_siren is below cap/2 so
+    # the 4-class cascade behaviour on Phase-1 patients is preserved.
     drug_class = np.full(len(p_drug), NONE_IDX, dtype=int)
     is_drug = p_drug >= model["tau_drug"]
     drug_class[is_drug & (p_kraken >= model["tau_kraken"])] = KRAKEN_IDX
@@ -216,6 +338,18 @@ def predict(model: dict, X: pd.DataFrame) -> pd.DataFrame:
     tc_u = np.array([_stable_uniform(e) for e in encounter_ids])
     drug_class[is_non_k & (tc_u < prev)] = TRITON_IDX
     drug_class[is_non_k & (tc_u >= prev)] = CORAL_IDX
+    # Hard-label override to Siren Spark requires BOTH (a) p_siren
+    # beats the renormalised cascade class probability AND (b) F is
+    # above the siren_f_gate. Gate (b) prevents Phase-1 patients
+    # (where F ≈ 0 by construction) from getting Siren labels just
+    # because the 4-class cascade was uncertain about them.
+    soft5 = np.stack([p_none, p_K, p_T, p_C, p_siren], axis=1)
+    cascade_class_prob = soft5[np.arange(len(soft5)), drug_class]
+    f_gate = model["siren_f_gate"]
+    drug_class = np.where(
+        (p_siren > cascade_class_prob) & (F > f_gate),
+        SIREN_IDX, drug_class,
+    )
 
     return pd.DataFrame({
         "encounter_id": encounter_ids,
@@ -226,6 +360,9 @@ def predict(model: dict, X: pd.DataFrame) -> pd.DataFrame:
         "p_kraken": p_K,
         "p_triton": p_T,
         "p_coral": p_C,
+        "p_siren_spark": p_siren,
+        "siren_U": U,
+        "siren_F": F,
     })
 
 
@@ -319,7 +456,7 @@ def main() -> None:
 
     X_df, y, ids = load_features_and_y()
     print(f"X: {X_df.shape}   y class counts: "
-          f"{np.bincount(y, minlength=4).tolist()}")
+          f"{np.bincount(y, minlength=5).tolist()}")
 
     PRODUCTION.mkdir(exist_ok=True)
 
@@ -355,6 +492,21 @@ def main() -> None:
           f"{triton_prev:.4f}  ({int((y[non_k_mask] == TRITON_IDX).sum())} "
           f"of {int(non_k_mask.sum())})")
 
+    # Siren-Spark reference stats: per-feature mean/std over the 14
+    # clinical features on the FULL training cohort, used at inference
+    # to compute F = mean |z| per encounter.
+    available = [c for c in SIREN_CLINICAL_FEATURES if c in X_df.columns]
+    missing_siren = [c for c in SIREN_CLINICAL_FEATURES
+                      if c not in X_df.columns]
+    if missing_siren:
+        print(f"WARN: Siren reference can't include "
+              f"{missing_siren} (missing in features_triage.csv)")
+    ref = X_df[available].apply(pd.to_numeric, errors="coerce")
+    siren_ref_mean = {c: float(ref[c].mean()) for c in available}
+    siren_ref_std = {c: float(ref[c].std(ddof=1)) for c in available}
+    print(f"Siren reference: {len(available)} clinical features, "
+          f"means computed on n={int(len(ref))}.")
+
     # Save artifacts
     joblib.dump(pre, PRODUCTION / "preprocessor.joblib")
     joblib.dump(tier1, PRODUCTION / "tier1_model.joblib")
@@ -376,7 +528,7 @@ def main() -> None:
         "n_train_total": int(len(y)),
         "n_train_drug_pos": int(drug_mask.sum()),
         "n_train_non_kraken_drug_pos": int(non_k_mask.sum()),
-        "class_counts": np.bincount(y, minlength=4).tolist(),
+        "class_counts": np.bincount(y, minlength=5).tolist(),
         "rforest_hyperparams": {
             "n_estimators": 400,
             "max_depth": 8,
@@ -388,6 +540,21 @@ def main() -> None:
             "tau_drug and tau_kraken were picked on 5-fold OOF "
             "(threshold_cascade_b.py) under the macro-F1 criterion and "
             "are FROZEN here — they are not re-picked at the 100% retrain."
+        ),
+        "siren_alpha": SIREN_ALPHA,
+        "siren_sharpness": SIREN_SHARPNESS,
+        "siren_cap": SIREN_CAP,
+        "siren_f_baseline": SIREN_F_BASELINE,
+        "siren_f_gate": SIREN_F_GATE,
+        "siren_clinical_features": available,
+        "siren_ref_mean": siren_ref_mean,
+        "siren_ref_std": siren_ref_std,
+        "siren_note": (
+            "5-class output adds Siren Spark (idx 4) as a soft "
+            "probability. Phase-1 training has no Siren ground truth; "
+            "p_siren is computed from cascade uncertainty + clinical-"
+            "feature anomaly vs Phase-1 reference. See "
+            "src/task1_drug_id/train_production.py for the recipe."
         ),
         "sklearn_version": sklearn.__version__,
         "numpy_version": np.__version__,
