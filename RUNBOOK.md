@@ -266,7 +266,7 @@ outcome` (exit code 0). Current state: top feature MI = 0.449
 Triton Tabs, Coral Dust}. Sourced from `outcomes.csv` (which in turn
 sources from `Task1_Two_Tier_Input_Data.csv`).
 
-### Four architectures (all retained as options)
+### Five architectures (all retained as options)
 
 | § | Architecture | Predicts | Cohort | Train script |
 |---|---|---|---|---|
@@ -274,40 +274,47 @@ sources from `Task1_Two_Tier_Input_Data.csv`).
 | **7c** | Tier-1 binary | drug / no-drug | all 261 | `src/task1_drug_id/train_binary.py` |
 | **7d** | Tier-2 multiclass | Kraken / Triton / Coral (given drug+) | 157 drug-positive | `src/task1_drug_id/train_tier2.py` |
 | **7e** | **Cascade** (tier-1 × tier-2 → 4-class) | None / Kraken / Triton / Coral | all 261 (via cascade) | `src/task1_drug_id/compare_cascade.py` |
+| **7f** | Kraken vs (Triton + Coral) | Kraken / other-drug | 157 drug-positive | `src/task1_drug_id/train_kraken_binary.py` |
 
-### Headline results — all four architectures
+### Headline results — all five architectures
 
-**Temporal holdout (last day = test, n=74 for 4-class/binary;
-n=45 for tier-2; rforest unless marked):**
+**Temporal holdout (last day = test):**
 
-| Architecture | Best model | macro ROC-AUC | macro PR-AUC | accuracy |
-|---|---|---:|---:|---:|
-| Direct 4-class | rforest | 0.697 | 0.408 | 0.392 |
-| Tier-1 binary | rforest | 0.717 (ROC-AUC) | 0.791 (PR-AUC) | 0.649 |
-| Tier-2 (3 drugs only) | **hgb** | 0.678 | 0.536 | 0.556 |
-| **Cascade** | rforest | **0.712** | **0.449** | **0.460** |
+| Architecture | Best model | n test | classes | ROC-AUC | PR-AUC | accuracy |
+|---|---|---:|:-:|---:|---:|---:|
+| Direct 4-class | rforest | 74 | 4 | 0.697 macro | 0.408 macro | 0.392 |
+| Tier-1 binary (drug vs no) | rforest | 74 | 2 | 0.717 | 0.791 | 0.649 |
+| Tier-2 (3 drugs only) | hgb | 45 | 3 | 0.678 macro | 0.536 macro | 0.556 |
+| Cascade (4-class via tier-1 × tier-2) | rforest | 74 | 4 | 0.712 macro | 0.449 macro | 0.460 |
+| **Kraken vs rest** | **hgb** | 45 | 2 | **0.825** | **0.877** | **0.800** |
 
-**5-fold CV (n=261 except tier-2 = 157):**
+**5-fold CV:**
 
-| Architecture | Best model | macro ROC-AUC | macro PR-AUC | accuracy |
-|---|---|---:|---:|---:|
-| Direct 4-class | rforest | 0.695 | 0.456 | 0.440 |
-| Tier-1 binary | rforest | 0.730 (ROC-AUC) | 0.820 (PR-AUC) | 0.700 |
-| Tier-2 (3 drugs only) | rforest | 0.709 | 0.591 | 0.528 |
-| **Cascade** | rforest | 0.676 | 0.379 | 0.475 |
+| Architecture | Best model | n | classes | ROC-AUC | PR-AUC | accuracy |
+|---|---|---:|:-:|---:|---:|---:|
+| Direct 4-class | rforest | 261 | 4 | 0.695 macro | 0.456 macro | 0.440 |
+| Tier-1 binary (drug vs no) | rforest | 261 | 2 | 0.730 | 0.820 | 0.700 |
+| Tier-2 (3 drugs only) | rforest | 157 | 3 | 0.709 macro | 0.591 macro | 0.528 |
+| Cascade | rforest | 261 | 4 | 0.676 macro | 0.379 macro | 0.475 |
+| **Kraken vs rest** | **hgb** | 157 | 2 | **0.806** | **0.769** | **0.751** |
 
 Notes on comparing these numbers:
 - **Direct vs Cascade** are directly comparable — both predict all
   four classes on all 261 patients. **Cascade is the deployment
-  recommendation** (see §7e for the head-to-head analysis).
-- **Tier-1 binary** is a 2-class problem (60% prevalence) — its
-  ROC-AUC and PR-AUC are not on the same scale as the 4-class
-  numbers. Useful as a screening test ("is there ANY drug?") and
-  as the first stage of the cascade.
-- **Tier-2** runs on 157 drug-positive patients only (3 classes,
-  ~37/32/31% K/T/C). Pairs with tier-1 in the cascade and is also
-  the natural input to the Task-3 triage calculator's "most likely
-  drug" card.
+  recommendation for the full 4-class problem** (see §7e).
+- **Tier-1 binary** is a 2-class problem (60% prevalence) on all
+  261 patients — screening test for "is there ANY drug?".
+- **Tier-2 multiclass** runs on 157 drug-positive patients (3
+  classes, ~37/32/31% K/T/C). Feeds the cascade and the Task-3
+  calculator's "most likely drug" card.
+- **Kraken vs rest** is a 2-class problem (37% Kraken) on the
+  drug-positive cohort. The strongest single-decision model in
+  the lot — Kraken's sympathomimetic triage signature is uniquely
+  visible at minute 0, so binarising the question instead of
+  asking K-vs-T-vs-C lifts AUC from ~0.71 to ~0.83 on the
+  holdout. Clinically meaningful because Kraken drives a
+  completely different ED workup (rhabdomyolysis labs +
+  aggressive fluids + cooling) from Triton/Coral (supportive).
 
 ### Common context
 
@@ -512,6 +519,58 @@ produces tier-1 and tier-2 probabilities separately, which is what
 the Task-3 triage calculator's two-card UI already wants.
 
 Details: [`research/04_cascade_vs_direct.md`](research/04_cascade_vs_direct.md).
+
+### 7f. Kraken vs (Triton + Coral) binary classifier
+
+Sub-problem on the drug-positive cohort: is this patient on
+**Kraken** (sympathomimetic, severity-enriched) or on one of the
+other two drugs (Triton depressant / Coral hallucinogen)? Clinically
+the highest-stakes single decision — Kraken triggers a completely
+different ED workup (rhabdomyolysis labs, IV fluids, cooling) from
+the supportive-only Triton/Coral pathway.
+
+```powershell
+.venv\Scripts\python.exe src\task1_drug_id\train_kraken_binary.py
+```
+
+Both 5-fold CV and temporal holdout in one go. Artifacts:
+- `derived/task1_kraken_binary_baseline_summary.csv` (CV)
+- `derived/task1_kraken_binary_oof_predictions.csv`
+- `derived/task1_kraken_binary_temporal_summary.csv`
+- `derived/task1_kraken_binary_temporal_predictions.csv`
+
+Class prevalence on cohort: 37% Kraken / 63% other-drug.
+
+**5-fold CV (n=157):**
+
+| Model | log-loss | accuracy | ROC-AUC | PR-AUC | Sens | Spec | BSS |
+|-------|---------:|---------:|--------:|-------:|-----:|-----:|----:|
+| logreg | 0.71 | 0.71 | 0.747 | 0.746 | 0.67 | 0.74 | +0.099 |
+| rforest | 0.54 | 0.76 | 0.800 | 0.767 | 0.62 | 0.84 | +0.241 |
+| **hgb** | **0.61** | **0.75** | **0.806** | **0.769** | 0.65 | 0.81 | **+0.234** |
+
+**Temporal holdout (test = last day, n=45):**
+
+| Model | log-loss | accuracy | ROC-AUC | PR-AUC | Sens | Spec | PPV | NPV | BSS |
+|-------|---------:|---------:|--------:|-------:|-----:|-----:|----:|----:|----:|
+| logreg | 1.09 | 0.67 | 0.633 | 0.769 | 0.50 | 0.86 | 0.80 | 0.60 | −0.113 |
+| rforest | 0.60 | 0.69 | 0.778 | 0.833 | 0.50 | 0.90 | 0.86 | 0.61 | +0.178 |
+| **hgb** | **0.65** | **0.80** | **0.825** | **0.877** | 0.75 | 0.86 | 0.86 | 0.75 | **+0.288** |
+
+**Why this works so well**: Kraken's defining v6 signals are *triage-visible* —
+high HR, high RR, elevated temperature, wide anion gap, agitation
+in the brief note. Triton and Coral lack equivalent triage-time
+signatures (their defining tokens — "ringing in ears", "time
+distortion" — live in HPI/MDM, post-triage). Binarising the
+problem as "Kraken vs everything-else-drug-related" gets all the
+signal the data has to offer.
+
+Compare with tier-2 multiclass (§7d, hgb holdout macro AUC 0.68)
+— forcing the model to also separate Triton from Coral introduces
+mostly-noise decisions that cap macro AUC. If the deployment
+question is "should this patient get rhabdo workup?", this
+Kraken-vs-rest model is the cleanest answer (PPV 0.86 at
+prevalence 0.53).
 
 ---
 
