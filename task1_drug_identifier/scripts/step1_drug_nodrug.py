@@ -6,14 +6,15 @@ Same two files as step 0
 data/llm_features.csv (optional — Rupesh's LLM-derived features, merged if present)
 Builds its own copy of the feature matrix internally
 
-Features (~28+, triage-only):
+Features (~29+, triage-only):
 
 8 vitals: HR, RR, systolic BP, diastolic BP, SpO2, temperature, GCS, pain
 6 labs (split from dict): glucose, pH, sodium, potassium, hemoglobin, anion gap
 1 onset feature: onset_minutes from brief note
+1 festival template flag (regex on brief note)
 ~9 chief complaint one-hot columns
-~4 mode-of-arrival one-hot columns (new)
-N LLM-derived features (new, optional — varies based on Rupesh's CSV)
+~4 mode-of-arrival one-hot columns
+N LLM-derived features (optional — varies based on Rupesh's CSV)
 
 Target: binary bucket (1 if in Yohan's GT, 0 if not)
 Outputs:
@@ -25,21 +26,30 @@ Top 15 RF feature importances
 """
 
 import ast
+import os
 import re
 import pandas as pd
-from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import GradientBoostingClassifier, RandomForestClassifier
+from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import (accuracy_score, average_precision_score,
                               f1_score, precision_score, recall_score,
                               roc_auc_score)
 from sklearn.model_selection import StratifiedKFold, cross_val_predict
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
 
 
 # ---- Config ----
 DATA_PATH = "data/Hackathon_Data_Release_1_SHARE.xlsx"
-GT_PATH   = "data/tox_ground_truth_v5.csv"
+GT_PATH   = "data/ground_truth_labels_v6.csv"
+LLM_PATH  = "data/llm_features.csv"
 
 ONSET_RE = re.compile(r"symptom onset\s+~?(\d+)\s+minutes?\s+before arrival",
                       re.IGNORECASE)
+FESTIVAL_TEMPLATE_RE = re.compile(
+    r"festival attendee\s+from\s+([a-zA-Z\s]+?)\s+with\s+symptom",
+    re.IGNORECASE,
+)
 
 VITALS = [
     "triage_heart_rate", "triage_respiratory_rate",
@@ -49,8 +59,6 @@ VITALS = [
 ]
 LAB_COLS = ["fingerstick_glucose", "ph", "sodium", "potassium",
             "hemoglobin", "anion_gap"]
-PMH_COLS = ["triage_mh_psych", "triage_mh_cardiac", "triage_mh_pulm",
-            "triage_mh_renal", "triage_mh_substance_use"]
 
 
 # ---- Load + build feature matrix ----
@@ -71,6 +79,9 @@ def extract_onset(text):
 
 
 triage["onset_minutes"] = triage["triage_brief_note"].apply(extract_onset)
+triage["note_is_festival_template"] = triage["triage_brief_note"].apply(
+    lambda t: 1 if isinstance(t, str) and FESTIVAL_TEMPLATE_RE.search(t) else 0
+).astype(int)
 triage["bucket"] = triage["encounter_id"].isin(set(gt["encounter_id"])).astype(int)
 
 labs = triage["triage.labs"].apply(parse_labs).apply(pd.Series)
@@ -81,46 +92,49 @@ chief = pd.get_dummies(
     triage[["encounter_id", "triage_chief_complaint"]],
     columns=["triage_chief_complaint"], drop_first=True,
 )
-
-# New: demographics + ESI + PMH
-sex = pd.get_dummies(
-    triage[["encounter_id", "triage_sex_gender"]],
-    columns=["triage_sex_gender"], drop_first=True,
+mode = pd.get_dummies(
+    triage[["encounter_id", "triage_mode_of_arrival"]],
+    columns=["triage_mode_of_arrival"], drop_first=True,
 )
-extras = triage[["encounter_id", "triage_age", "triage_esi"] + PMH_COLS]
 
-data = (triage[["encounter_id", "bucket", "onset_minutes"] + VITALS]
-        .merge(labs,   on="encounter_id")
-        .merge(chief,  on="encounter_id")
-        .merge(extras, on="encounter_id")
-        .merge(sex,    on="encounter_id"))
+data = (triage[["encounter_id", "bucket", "onset_minutes",
+                "note_is_festival_template"] + VITALS]
+        .merge(labs,  on="encounter_id")
+        .merge(chief, on="encounter_id")
+        .merge(mode,  on="encounter_id"))
+
+if os.path.exists(LLM_PATH):
+    llm = pd.read_csv(LLM_PATH)
+    data = data.merge(llm, on="encounter_id", how="left")
+    print(f"Merged {llm.shape[1] - 1} LLM feature(s) from {LLM_PATH}")
+else:
+    print(f"No LLM features at {LLM_PATH} — skipping")
 
 y = data["bucket"]
 print(f"Patients: {len(data)}   drug: {int(y.sum())}   no_drug: {int((y==0).sum())}")
 
-
-# ---- Define feature sets ----
-extras_cols = ["triage_age", "triage_esi"] + PMH_COLS + [
-    c for c in data.columns if c.startswith("triage_sex_gender_")
-]
-all_features      = [c for c in data.columns if c not in {"encounter_id", "bucket"}]
-baseline_features = [c for c in all_features if c not in extras_cols]
+all_features = [c for c in data.columns if c not in {"encounter_id", "bucket"}]
 
 
-# ---- Model + CV ----
-rf = RandomForestClassifier(n_estimators=300, random_state=42, n_jobs=-1)
+# ---- Models + CV ----
+rf  = RandomForestClassifier(n_estimators=300, random_state=42, n_jobs=-1)
+gbt = GradientBoostingClassifier(random_state=42)
+lr  = Pipeline([("scaler", StandardScaler()),
+                ("clf", LogisticRegression(max_iter=1000))])
+
+models = [("RF", rf), ("GBT", gbt), ("LR", lr)]
 kf = StratifiedKFold(n_splits=10, shuffle=True, random_state=42)
 
 
-def evaluate(X, y, name):
+def evaluate(model, X, y, name):
     X = X.copy()
     if "onset_minutes" in X.columns:
         X["onset_minutes"] = X["onset_minutes"].fillna(0)
     X = X.fillna(X.median(numeric_only=True))
-    preds = cross_val_predict(rf, X, y, cv=kf)
-    probs = cross_val_predict(rf, X, y, cv=kf, method="predict_proba")[:, 1]
+    preds = cross_val_predict(model, X, y, cv=kf)
+    probs = cross_val_predict(model, X, y, cv=kf, method="predict_proba")[:, 1]
     return {
-        "config":    name,
+        "model":     name,
         "n_feat":    X.shape[1],
         "accuracy":  round(accuracy_score(y, preds), 3),
         "precision": round(precision_score(y, preds), 3),
@@ -131,23 +145,19 @@ def evaluate(X, y, name):
     }
 
 
-results = [
-    evaluate(data[baseline_features], y, "baseline"),
-    evaluate(data[all_features],      y, "+ extras"),
-]
-print("\n=== Random forest, 10-fold CV ===")
+results = [evaluate(m, data[all_features], y, name) for name, m in models]
+print("\n=== 10-fold CV ===")
 print(pd.DataFrame(results).to_string(index=False))
 
 
-# ---- Feature importance (full feature set) ----
+# ---- RF feature importance ----
 X_full = data[all_features].copy()
 X_full["onset_minutes"] = X_full["onset_minutes"].fillna(0)
 X_full = X_full.fillna(X_full.median(numeric_only=True))
 rf.fit(X_full, y)
-
 imp = pd.DataFrame({
     "feature":    all_features,
     "importance": rf.feature_importances_,
 }).sort_values("importance", ascending=False).head(15)
-print("\n=== Top 15 features ===")
+print("\n=== RF top 15 features ===")
 print(imp.to_string(index=False))
