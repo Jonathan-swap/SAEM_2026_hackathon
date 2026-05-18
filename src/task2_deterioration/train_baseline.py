@@ -23,6 +23,7 @@ Reports:
 """
 from __future__ import annotations
 
+import argparse
 from pathlib import Path
 
 import numpy as np
@@ -46,11 +47,16 @@ CLASSES = ["Discharge", "Floor", "ICU"]
 PROB_COLS = ["p_kraken", "p_triton", "p_coral", "p_none"]
 
 
-def load_data(use_drug_probs_as_features: bool = True
+def load_data(use_drug_probs_as_features: bool = True,
+              cohort: str = "drug-positive"
               ) -> tuple[pd.DataFrame, np.ndarray, np.ndarray]:
-    """Cohort: patients positive for a festival drug per the manual
-    ground truth (ground_truth_drug != 0). Switched 2026-05-17 from
-    LLM-consensus argmax to manual annotation."""
+    """Cohort options:
+      - ``drug-positive``: patients with ground_truth_drug != 0 (157
+        of 261). This is the brief's stated Task-2 cohort: predict
+        deterioration for festival-drug patients.
+      - ``all``: every encounter (261). None-class patients are
+        included; most disposition to Discharge.
+    """
     X = pd.read_csv(DERIVED / "features_fourh.csv")
     gt = pd.read_csv(DERIVED / "ground_truth.csv")[
         ["encounter_id", "ground_truth_drug", "ground_truth_drug_name"]]
@@ -61,11 +67,15 @@ def load_data(use_drug_probs_as_features: bool = True
     df = X.merge(gt, on="encounter_id", how="inner")
     df = df.merge(probs, on="encounter_id", how="inner")
 
-    # Cohort filter: drug-positive per manual ground truth
     n_before = len(df)
-    df = df[df["ground_truth_drug"] != 0].reset_index(drop=True)
-    print(f"Cohort filter (ground_truth_drug != None): "
-          f"{n_before} -> {len(df)} patients (drug-positive)")
+    if cohort == "drug-positive":
+        df = df[df["ground_truth_drug"] != 0].reset_index(drop=True)
+        print(f"Cohort filter (drug-positive): "
+              f"{n_before} -> {len(df)} patients")
+    elif cohort == "all":
+        print(f"Cohort: all {n_before} patients (no filter)")
+    else:
+        raise ValueError(f"Unknown cohort: {cohort!r}")
 
     # Drop columns that should not be features
     drop = [
@@ -235,8 +245,20 @@ def evaluate(model_name: str, X: pd.DataFrame,
 
 
 def main() -> None:
+    ap = argparse.ArgumentParser(description=__doc__,
+                                  formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--cohort",
+                    choices=["drug-positive", "all"],
+                    default="drug-positive",
+                    help="Cohort to train on. drug-positive (default) "
+                         "matches the brief's Task-2 scope (n=157). "
+                         "'all' uses every encounter (n=261).")
+    args = ap.parse_args()
+    suffix = "" if args.cohort == "drug-positive" else "_all"
+
     print("="*78)
-    print("Task 2 baseline — disposition prediction (Discharge / Floor / ICU)")
+    print(f"Task 2 baseline — disposition prediction (cohort: "
+          f"{args.cohort})")
     print("="*78)
 
     # Two variants: with and without Task-1 drug-class probabilities
@@ -245,7 +267,8 @@ def main() -> None:
         ("WITHOUT drug-class probs (clinical features only)", False),
     ]:
         print(f"\n\n###### VARIANT: {variant_name} ######")
-        X, y, y_label = load_data(use_drug_probs_as_features=use_drug_probs)
+        X, y, y_label = load_data(use_drug_probs_as_features=use_drug_probs,
+                                    cohort=args.cohort)
 
         print(f"X: {X.shape}, y: {y.shape}")
         print(f"Disposition distribution: "
@@ -316,22 +339,30 @@ def main() -> None:
                                       target_names=CLASSES, digits=3,
                                       zero_division=0))
 
-        # Save artifacts for the WITH-probs variant
+        # Save artifacts for the WITH-probs variant.
+        # Filename: task2_baseline_summary.csv for drug-positive
+        # (default), task2_baseline_summary_all.csv for the
+        # all-patients variant. Keeps both side by side.
         if use_drug_probs:
             ids = pd.read_csv(DERIVED / "features_fourh.csv")[
                 ["encounter_id"]]
             gt = pd.read_csv(DERIVED / "ground_truth.csv")[
                 ["encounter_id", "ground_truth_drug"]]
             ids = ids.merge(gt, on="encounter_id")
-            cohort = ids[ids["ground_truth_drug"] != 0].reset_index(drop=True)
+            if args.cohort == "drug-positive":
+                cohort_ids = ids[ids["ground_truth_drug"] != 0]\
+                    .reset_index(drop=True)
+            else:
+                cohort_ids = ids.reset_index(drop=True)
             oof = pd.DataFrame(oof_store[best]["proba"],
                                 columns=[f"p_{c}" for c in CLASSES])
-            oof.insert(0, "encounter_id", cohort["encounter_id"].values)
+            oof.insert(0, "encounter_id",
+                        cohort_ids["encounter_id"].values)
             oof["pred_argmax"] = [CLASSES[i] for i in oof_store[best]["pred"]]
             oof["true_label"] = y_label
-            oof_path = DERIVED / "task2_oof_predictions.csv"
+            oof_path = DERIVED / f"task2_oof_predictions{suffix}.csv"
             oof.to_csv(oof_path, index=False)
-            summary_path = DERIVED / "task2_baseline_summary.csv"
+            summary_path = DERIVED / f"task2_baseline_summary{suffix}.csv"
             summary.to_csv(summary_path)
             print(f"\nSaved: {oof_path}")
             print(f"Saved: {summary_path}")

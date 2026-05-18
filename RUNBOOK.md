@@ -309,8 +309,23 @@ Cohort: drug-positive per ground truth (`ground_truth_drug != 0`),
 ### 8a. 5-fold stratified cross-validation
 
 ```powershell
+# Default — drug-positive cohort (brief's stated scope, n=157)
 .venv\Scripts\python.exe src\task2_deterioration\train_baseline.py
+
+# OR: all-patients cohort (n=261, includes None-class)
+.venv\Scripts\python.exe src\task2_deterioration\train_baseline.py --cohort all
 ```
+
+The `--cohort` flag has two values:
+- `drug-positive` (default) — patients with `ground_truth_drug != 0`,
+  157 of 261. Matches the hackathon brief's Task-2 scope.
+- `all` — every encounter (261). None-class patients are
+  predominantly Discharge, which inflates the macro AUC.
+
+Outputs land at `task2_baseline_summary.csv` /
+`task2_oof_predictions.csv` for the drug-positive cohort and
+`task2_baseline_summary_all.csv` / `task2_oof_predictions_all.csv`
+for the all-patients cohort.
 
 Artifacts (WITH-probs variant overrides):
 `derived/task2_baseline_summary.csv` + `task2_oof_predictions.csv`.
@@ -325,13 +340,29 @@ Clinical-only variant:
 
 Class prevalence: Discharge 0.77 / Floor 0.14 / ICU 0.09.
 
-**Per-class metrics for rforest:**
+**Per-class metrics for rforest (drug-positive, n=157):**
 
 | Class | Prevalence | ROC-AUC | PR-AUC | Brier | BSS |
 |---|---:|---:|---:|---:|---:|
 | Discharge | 0.77 | 0.933 | 0.966 | 0.066 | **+0.624** |
 | Floor | 0.14 | 0.934 | 0.834 | 0.061 | **+0.483** |
 | ICU | 0.09 | 0.915 | 0.887 | 0.032 | **+0.613** |
+
+**Macro metrics for all-patients cohort (n=261, rforest)**:
+
+| Variant | macro ROC-AUC | macro PR-AUC |
+|---|---:|---:|
+| WITHOUT drug-probs (clinical-only) | **0.955** | **0.905** |
+| WITH drug-probs | **0.955** | **0.904** |
+
+Disposition distribution on the full cohort: Discharge 171 (66%) /
+Floor 52 (20%) / ICU 38 (15%). The all-patients macro AUC is
+higher than drug-positive (0.955 vs 0.927) because the added
+None-class patients are predominantly Discharge — they're easy
+calls that pad the macro average. The **drug-positive cohort is
+the harder, brief-relevant problem**: predicting deterioration
+among festival-drug patients where Discharge is no longer the
+dominant class.
 
 ### 8b. Temporal holdout — **deployment-relevant**
 
@@ -396,12 +427,14 @@ inputs pushed which direction. Prints to a 1-page paper card.
 .venv\Scripts\python.exe src\unsupervised\cluster.py
 ```
 
-Two clustering runs mirroring the supervised models' cohorts:
+Two clustering runs mirroring the supervised models' targets:
 
-- **task1**: all 261 encounters, `features_triage.csv`, KMeans(4)
-  (3 drugs + None)
+- **task1**: all 261 encounters, `features_triage.csv`, KMeans(4),
+  truth = `ground_truth_drug_name` (None / Kraken / Triton / Coral)
 - **task2**: 157 drug-positive (per `ground_truth_drug != 0`),
-  `features_fourh.csv`, KMeans(3)
+  `features_fourh.csv`, KMeans(3), truth =
+  **`encounter_disposition_label`** (Discharge / Floor / ICU) —
+  the actual Task-2 outcome, not the drug class
 
 For each: HDBSCAN runs too (typically finds 0 dense clusters — real
 result, features are high-dim and toxidromes overlap), PCA(2) scatter
@@ -423,13 +456,26 @@ Artifacts:
   cluster, ground_truth_drug_name, and distance from EVERY
   cluster's centroid (sorted by distance to own centroid)
 
-Stdout reports cluster ARI / NMI vs ground truth and top-1 macro
-purity. Currently:
+Stdout reports cluster ARI / NMI vs the task-specific truth and
+top-1 macro purity. Currently:
 
-| Run | n | KMeans ARI | Macro top-1 purity |
-|---|---:|---:|---:|
-| task1 | 261 | 0.05 | 0.48 |
-| task2 | 157 | 0.04 | 0.52 (cluster 2 = 69% Kraken) |
+| Run | n | Truth | KMeans ARI | Macro top-1 purity |
+|---|---:|---|---:|---|
+| task1 | 261 | drug class | 0.049 | 0.48 |
+| task2 | 157 | disposition | **0.281** | **0.789** (C2 = 50% Floor + 38% ICU = 88% admitted) |
+
+Aligning Task-2 clustering with the disposition target (instead of
+drug class) tripled both ARI (0.05 → 0.28) and macro purity
+(0.52 → 0.79). The features built on the 4h horizon track
+disposition severity, not toxidrome identity — which is the
+correct answer for the supervised Task-2 model too.
+
+Plot headings have been updated:
+
+- `cluster_pca_task1.png` → "Task 1 (drug ID at triage, n=261)
+  | KMeans(4) vs ground-truth drug class"
+- `cluster_pca_task2.png` → "Task 2 (4h deterioration) |
+  KMeans(3) vs ground-truth disposition"
 
 ---
 

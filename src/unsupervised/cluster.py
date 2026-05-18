@@ -94,6 +94,8 @@ def cluster_one(
     ground_truth: pd.DataFrame,
     cohort_filter: callable | None,
     n_kmeans: int,
+    truth_col: str = "ground_truth_drug_name",
+    truth_classes: list[str] | None = None,
     extra_label_col: str | None = None,
 ) -> dict:
     """One task-aligned clustering run.
@@ -103,12 +105,20 @@ def cluster_one(
         features_path: csv to read features from.
         ground_truth: DataFrame with at least
             ``encounter_id, ground_truth_drug, ground_truth_drug_name``.
+            Merged in so the cohort filter has access to drug labels.
         cohort_filter: optional callable receiving the joined DF and
             returning a boolean mask; used to drop None for Task 2.
         n_kmeans: number of KMeans clusters.
-        extra_label_col: optional extra column from features_path to
-            cross-tab against (e.g. ``encounter_disposition_label``
-            for Task 2).
+        truth_col: column in the joined DF used as the supervised
+            truth label for plot annotations + ARI/NMI. Defaults to
+            drug class. For Task 2 set this to
+            ``encounter_disposition_label`` so the clusters are
+            evaluated against the actual Task-2 outcome.
+        truth_classes: optional ordered list of class names. Used to
+            keep colours consistent across the cluster panel and the
+            truth panel of the PCA scatter.
+        extra_label_col: optional secondary column from features_path
+            to cross-tab against.
     """
     print(f"\n{'='*72}\nClustering — {name}\n{'='*72}")
     df = pd.read_csv(features_path)
@@ -118,13 +128,16 @@ def cluster_one(
         df = df[cohort_filter(df)].reset_index(drop=True)
     print(f"Cohort: {n_before} -> {len(df)} encounters "
           f"({features_path.name})")
+    print(f"Truth label: {truth_col}")
 
     encounter_ids = df["encounter_id"].to_numpy()
-    # ground_truth_drug_name is NaN for None-class rows; coerce to
-    # the literal string "None" so sklearn metrics don't choke on NaN.
-    truth = (df["ground_truth_drug_name"].fillna("None")
-                .astype(str).to_numpy())
-    truth_idx = df["ground_truth_drug"].astype(int).to_numpy()
+    # truth may have NaN (drug name is NaN for None-class rows in
+    # task1). Coerce NaN -> "None" so sklearn metrics survive.
+    truth = df[truth_col].fillna("None").astype(str).to_numpy()
+    if truth_classes is None:
+        truth_classes = sorted(set(truth.tolist()))
+    class_to_idx = {c: i for i, c in enumerate(truth_classes)}
+    truth_idx = np.array([class_to_idx.get(t, 0) for t in truth])
     extra = (df[extra_label_col].astype(str).to_numpy()
              if extra_label_col and extra_label_col in df.columns
              else None)
@@ -194,11 +207,24 @@ def cluster_one(
     # Project KMeans centroids into the same 2-D PCA space.
     centroids_2d = pca.transform(km.cluster_centers_)
 
+    # Plot heading derived from the task name + truth column so the
+    # title says exactly what's coloured on each panel.
+    pretty_name = {"task1": "Task 1 (drug ID at triage, n=261)",
+                    "task2": "Task 2 (4h deterioration)"}\
+                    .get(name, name)
+    pretty_truth = {"ground_truth_drug_name": "drug class",
+                     "encounter_disposition_label": "disposition"}\
+                     .get(truth_col, truth_col)
+
     fig, axes = plt.subplots(1, 2, figsize=(13, 5.5))
+    fig.suptitle(f"{pretty_name}  |  KMeans({n_kmeans}) "
+                  f"vs ground-truth {pretty_truth}",
+                  fontsize=12, fontweight="bold", y=1.02)
 
     sc0 = axes[0].scatter(coords[:, 0], coords[:, 1],
                             c=km_labels, cmap="tab10", s=18, alpha=0.75)
-    axes[0].set_title(f"KMeans({n_kmeans}) — {name}")
+    axes[0].set_title(f"KMeans cluster assignment "
+                       f"(n_clusters = {n_kmeans})")
     axes[0].set_xlabel(
         f"PC1 ({pca.explained_variance_ratio_[0] * 100:.1f}%)")
     axes[0].set_ylabel(
@@ -245,13 +271,14 @@ def cluster_one(
 
     sc1 = axes[1].scatter(coords[:, 0], coords[:, 1],
                             c=truth_idx, cmap="tab10", s=18, alpha=0.75)
-    axes[1].set_title(f"Ground truth drug — {name}")
+    axes[1].set_title(f"Ground-truth {pretty_truth} "
+                       f"({len(truth_classes)} classes)")
     axes[1].set_xlabel(
         f"PC1 ({pca.explained_variance_ratio_[0] * 100:.1f}%)")
     axes[1].set_ylabel(
         f"PC2 ({pca.explained_variance_ratio_[1] * 100:.1f}%)")
     cbar = plt.colorbar(sc1, ax=axes[1])
-    cbar.set_label("ground_truth_drug")
+    cbar.set_label(truth_col)
     # Overlay KMeans centroids on the truth panel too, for direct
     # comparison. Same top-3 candidate annotation as panel 0.
     for k in range(n_kmeans):
@@ -288,7 +315,7 @@ def cluster_one(
         rev = pd.DataFrame({
             "encounter_id": encounter_ids[mask],
             "assigned_cluster": km_labels[mask],
-            "ground_truth_drug_name": truth[mask],
+            truth_col: truth[mask],
         })
         if extra_for_review is not None:
             rev[extra_label_col] = extra_for_review[mask]
@@ -302,12 +329,12 @@ def cluster_one(
           f"({n_kmeans} files)")
 
     # ---- Cluster <-> ground truth cross-tabs ----
-    print(f"\n  KMeans cluster vs ground_truth_drug_name:")
+    print(f"\n  KMeans cluster vs {truth_col}:")
     ct_km = pd.crosstab(pd.Series(km_labels, name="cluster"),
                          pd.Series(truth, name="truth"))
     print(_indent(ct_km.to_string()))
 
-    print(f"\n  GMM cluster vs ground_truth_drug_name:")
+    print(f"\n  GMM cluster vs {truth_col}:")
     ct_gmm = pd.crosstab(pd.Series(gmm_labels, name="cluster"),
                           pd.Series(truth, name="truth"))
     print(_indent(ct_gmm.to_string()))
@@ -323,9 +350,9 @@ def cluster_one(
     nmi_km = normalized_mutual_info_score(truth, km_labels)
     ari_gmm = adjusted_rand_score(truth, gmm_labels)
     nmi_gmm = normalized_mutual_info_score(truth, gmm_labels)
-    print(f"\n  KMeans  vs ground_truth_drug_name: "
+    print(f"\n  KMeans  vs {truth_col}: "
           f"ARI = {ari_km:.3f}   NMI = {nmi_km:.3f}")
-    print(f"  GMM     vs ground_truth_drug_name: "
+    print(f"  GMM     vs {truth_col}: "
           f"ARI = {ari_gmm:.3f}   NMI = {nmi_gmm:.3f}")
 
     # ---- Print full candidate-label distribution per cluster ----
@@ -348,7 +375,7 @@ def cluster_one(
         "encounter_id": encounter_ids,
         f"kmeans_{name}": km_labels,
         f"gmm_{name}": gmm_labels,
-        "ground_truth_drug_name": truth,
+        truth_col: truth,
     })
     # GMM posterior probabilities for soft membership
     for k in range(n_kmeans):
@@ -384,25 +411,31 @@ def main() -> None:
           f"{gt['ground_truth_drug_name'].value_counts().to_dict()}")
 
     # Task 1 — all 261 encounters, triage features, 4 expected clusters
-    # (None + 3 drugs). No cohort filter.
+    # (None + 3 drugs). Truth = drug class.
     res_t1 = cluster_one(
         name="task1",
         features_path=DERIVED / "features_triage.csv",
         ground_truth=gt,
         cohort_filter=None,
         n_kmeans=4,
+        truth_col="ground_truth_drug_name",
+        truth_classes=DRUG_CLASSES,
         extra_label_col=None,
     )
 
-    # Task 2 — drug-positive cohort only (ground_truth_drug != 0),
-    # 4h features, 3 expected clusters. Also crosstab vs disposition.
+    # Task 2 — drug-positive cohort, 4h features, 3 expected clusters.
+    # Truth = DISPOSITION (the actual Task-2 outcome). Drug-class is
+    # kept as a secondary cross-tab so we can still see Kraken/Triton/
+    # Coral split inside each cluster.
     res_t2 = cluster_one(
         name="task2",
         features_path=DERIVED / "features_fourh.csv",
         ground_truth=gt,
         cohort_filter=lambda d: d["ground_truth_drug"] != 0,
         n_kmeans=3,
-        extra_label_col="encounter_disposition_label",
+        truth_col="encounter_disposition_label",
+        truth_classes=DISPO_CLASSES,
+        extra_label_col="ground_truth_drug_name",
     )
 
     print(f"\n{'='*72}\nSummary\n{'='*72}")
