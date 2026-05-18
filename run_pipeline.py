@@ -30,8 +30,12 @@ Order:
  10. [optional] 10 LLM agents  (spawn via harness — manual step)
  11. merge_probabilities       (consensus across agents)
  12. cleanup_features          (drop constants, merge candidates)
- 13. train Task 1              (drug ID at triage)
- 14. train Task 2              (deterioration at 4h)
+ 13. train Task 1 baseline     (direct 4-class — §7a comparison)
+ 14. task1_cascade_b           (DEFAULT — Cascade-B with rforest +
+                                 macro-F1-picked thresholds + prevalence
+                                 Bernoulli stage-3; writes the canonical
+                                 derived/task1_drug_predictions.csv)
+ 15. train Task 2              (deterioration at 4h)
 """
 from __future__ import annotations
 
@@ -60,7 +64,11 @@ POST_AGENT_STEPS = [
     ("merge_probabilities",  "src/labels/merge_probabilities.py"),
     ("eda_descriptive",      "src/eda/eda_descriptive.py"),
     ("cleanup_features",     "src/features/cleanup_features.py"),
-    ("train_task1",          "src/task1_drug_id/train_baseline.py"),
+    ("train_task1_baseline", "src/task1_drug_id/train_baseline.py"),
+    # DEFAULT Task-1 model: Cascade-B (rforest, threshold-tuned, prevalence-
+    # Bernoulli stage-3). Produces the canonical per-encounter predictions
+    # at derived/task1_drug_predictions.csv (encounter_id, drug_class 0-3).
+    ("task1_cascade_b",      "src/task1_drug_id/threshold_cascade_b.py"),
     ("train_task2",          "src/task2_deterioration/train_baseline.py"),
 ]
 
@@ -125,7 +133,12 @@ def main() -> None:
     print("\nArtifacts (derived/):")
     print(f"  features_triage.csv / features_fourh.csv")
     print(f"  ground_truth.csv / probs_avg.csv / derived_labels.csv")
-    print(f"  task1_baseline_summary.csv / task1_oof_predictions.csv")
+    print(f"  task1_baseline_summary.csv / task1_oof_predictions.csv "
+          f"(direct 4-class baseline, §7a)")
+    print(f"  task1_drug_predictions.csv "
+          f"(DEFAULT — Cascade-B canonical predictions)")
+    print(f"  task1_cascade_b_threshold_grid.csv / _picked.csv / "
+          f"_labels.csv / _report.md")
     print(f"  task2_baseline_summary.csv / task2_oof_predictions.csv")
     print(f"  eda_descriptive_report.md + eda_plots/")
 

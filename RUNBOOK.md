@@ -270,6 +270,41 @@ outcome` (exit code 0). Current state: top feature MI = 0.449
 Triton Tabs, Coral Dust}. Sourced from `outcomes.csv` (which in turn
 sources from `Task1_Two_Tier_Input_Data.csv`).
 
+### Default Task-1 model
+
+The canonical Task-1 model for deployment is **Cascade-B (rforest)
+with threshold-tuned stage 1 + 2 and prevalence-Bernoulli stage 3**.
+It is wired into `run_pipeline.py` as the `task1_cascade_b` step and
+produces the canonical per-encounter prediction file:
+
+```
+derived/task1_drug_predictions.csv     encounter_id, drug_class (0-3)
+                                         0=None, 1=Kraken, 2=Triton, 3=Coral
+```
+
+Run standalone with:
+```powershell
+.venv\Scripts\python.exe src\task1_drug_id\threshold_cascade_b.py
+```
+
+Picks thresholds on 5-fold OOF (n=261) under three criteria
+(macro F1 / accuracy / min-class F1) and applies them unchanged to
+the temporal holdout. Stage 3 (Triton vs Coral) has no model — each
+non-Kraken drug-positive encounter is assigned T/C via a deterministic
+md5-of-encounter_id Bernoulli draw against the training prevalence,
+so the marginal T/C output matches the training distribution.
+
+| Picked criterion | τ_drug | τ_kraken | OOF acc | OOF macro F1 |
+|---|---:|---:|---:|---:|
+| **macro F1 (default)** | 0.57 | 0.45 | **0.502 (131/261)** | **0.434** |
+| accuracy | 0.57 | 0.45 | 0.502 | 0.434 |
+| min-class F1 | 0.33 | 0.51 | 0.352 | 0.356 |
+
+Full report: `derived/task1_cascade_b_threshold_report.md`. Sub-section
+§7h covers the architecture comparison that justifies Cascade-B as the
+champion. Sub-sections §7a–§7g are retained for comparison and
+research provenance.
+
 ### Seven architectures (all retained; §7h compares 4 of them)
 
 | § | Architecture | Predicts | Cohort | Train script |
