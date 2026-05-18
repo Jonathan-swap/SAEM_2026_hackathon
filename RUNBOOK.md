@@ -8,6 +8,32 @@ audit, task-aligned clustering. Every command runs from the repo
 root (`SAEM_2026_hackathon/`). PowerShell on Windows; substitute
 `.venv/bin/python` on macOS/Linux.
 
+## Outcomes vs features (read this first)
+
+Two **supervised targets** live in a single canonical file:
+
+```
+derived/outcomes.csv
+  encounter_id, ground_truth_drug, ground_truth_drug_name, encounter_disposition_label
+```
+
+| Task | Target column | Class set | Source sheet |
+|---|---|---|---|
+| **Task 1** | `ground_truth_drug` (int 0-3) / `ground_truth_drug_name` | None / Kraken / Triton / Coral | `Task1_Two_Tier_Input_Data.csv` |
+| **Task 2** | `encounter_disposition_label` | Discharge / Floor / ICU | xlsx `Disposition` sheet |
+
+**Important to internalise about Task 2**: the target is
+**disposition** (where the patient ends up — Discharge / Floor /
+ICU), NOT drug class. The drug class only acts as a *cohort filter*
+in the default mode (`--cohort drug-positive` → train only on the
+157 patients with `ground_truth_drug != 0`). The prediction over
+that cohort is still Discharge vs Floor vs ICU.
+
+The two feature tables (`features_triage.csv`, `features_fourh.csv`)
+contain **only features** — no outcome columns. The split is
+structural: a script that doesn't read `outcomes.csv` literally
+cannot see the target.
+
 ---
 
 ## 0. Prerequisites
@@ -234,6 +260,10 @@ outcome` (exit code 0). Current state: top feature MI = 0.449
 
 ## 7. Train + evaluate Task 1 (drug ID at triage)
 
+**What is predicted**: `ground_truth_drug` ∈ {None, Kraken Candy,
+Triton Tabs, Coral Dust}. Sourced from `outcomes.csv` (which in turn
+sources from `Task1_Two_Tier_Input_Data.csv`).
+
 Two evaluation modes are available, both leakage-clean and using
 the manual ground truth + v6 features:
 
@@ -308,8 +338,17 @@ Holdout AUC ≈ CV AUC — the Task-1 ceiling is data-bound. See
 
 ## 8. Train + evaluate Task 2 (4h deterioration)
 
-Cohort: drug-positive per ground truth (`ground_truth_drug != 0`),
-157 of 261 patients. Two variants per run:
+**What is predicted**: `encounter_disposition_label` ∈ {Discharge,
+Floor, ICU}. Sourced from `outcomes.csv` (which in turn sources from
+the xlsx `Disposition` sheet — never from a feature file).
+
+**Cohort filter** (default): drug-positive per ground truth
+(`outcomes.csv :: ground_truth_drug != 0`), 157 of 261 patients.
+Drug class is **only the cohort selector** — the model itself
+predicts Discharge / Floor / ICU. Override with
+`--cohort all` to train on every encounter.
+
+Two variants per run:
 - **WITH** drug-class probs as features (requires §5b)
 - **WITHOUT** (clinical features only — runs unconditionally)
 
@@ -567,7 +606,10 @@ derived/                       ← all pipeline outputs (tracked)
   narratives.jsonl
   features_triage.csv          ← Task-1 inputs (triage horizon)
   features_fourh.csv           ← Task-2 inputs (4h horizon)
-  ground_truth.csv             ← manual labels
+  ground_truth.csv             ← manual drug labels (intermediate)
+  outcomes.csv                 ← CANONICAL labels for both tasks:
+                                 ground_truth_drug + encounter_disposition_label
+                                 (built by src/labels/build_outcomes.py)
   probs_1..10.csv              ← per-agent (LLM) probabilities — optional
   probs_avg.csv                ← averaged agent consensus — optional
   exploratory_features.csv     ← cand_* candidate features
@@ -585,7 +627,10 @@ derived/                       ← all pipeline outputs (tracked)
 src/
   features/                    ← extract_* + cleanup_features.py
     extract_v6_features.py     ← PE binaries + peak thresholds + triage keywords (NEW)
-  labels/                      ← load_ground_truth.py, merge_probabilities.py,
+  labels/                      ← load_ground_truth.py (drug labels),
+                                 build_outcomes.py (canonical outcomes.csv —
+                                   drug + disposition merged),
+                                 merge_probabilities.py,
                                  agents/agent_01..10 + PROMPTS.md (v6-aligned)
   eda/                         ← eda_descriptive.py, eda_advanced.py,
                                  check_time_horizons.py,
