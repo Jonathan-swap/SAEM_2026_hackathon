@@ -45,7 +45,7 @@ import re
 from pathlib import Path
 
 ROOT = Path(r"C:/Users/rs3te/Work/Claude-safe/SAEM-Hackathon")
-IN_PATH = ROOT / "derived" / "narratives.jsonl"
+IN_PATH = ROOT / "derived" / "narratives_fourh.jsonl"
 OUT_PATH = ROOT / "derived" / "probs_4.csv"
 
 # --- Detect medical-pathology lead in MDM --------------------------------

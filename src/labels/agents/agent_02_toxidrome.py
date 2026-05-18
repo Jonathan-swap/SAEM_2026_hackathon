@@ -17,7 +17,7 @@ import math
 import re
 from pathlib import Path
 
-IN = Path(r"C:\Users\rs3te\Work\Claude-safe\SAEM-Hackathon\derived\narratives.jsonl")
+IN = Path(r"C:\Users\rs3te\Work\Claude-safe\SAEM-Hackathon\derived\narratives_fourh.jsonl")
 OUT = Path(r"C:\Users\rs3te\Work\Claude-safe\SAEM-Hackathon\derived\probs_2.csv")
 
 

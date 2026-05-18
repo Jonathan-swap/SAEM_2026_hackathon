@@ -21,7 +21,7 @@ from pathlib import Path
 import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[3]
-NARR = ROOT / "derived" / "narratives.jsonl"
+NARR = ROOT / "derived" / "narratives_fourh.jsonl"
 OUT = ROOT / "derived" / "probs_8.csv"
 
 CLASSES = ["kraken", "triton", "coral", "none"]

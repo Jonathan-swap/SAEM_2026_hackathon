@@ -24,7 +24,7 @@ from pathlib import Path
 import numpy as np
 
 HERE = Path(__file__).resolve().parents[3] / "derived"
-NARR = HERE / "narratives.jsonl"
+NARR = HERE / "narratives_fourh.jsonl"
 OUT = HERE / "probs_9.csv"
 
 

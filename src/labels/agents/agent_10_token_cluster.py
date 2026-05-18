@@ -15,7 +15,7 @@ import re
 from pathlib import Path
 
 ROOT = Path(r"C:\Users\rs3te\Work\Claude-safe\SAEM-Hackathon")
-INPUT = ROOT / "derived" / "narratives.jsonl"
+INPUT = ROOT / "derived" / "narratives_fourh.jsonl"
 OUTPUT = ROOT / "derived" / "probs_10.csv"
 
 # Reference clusters (lowercase, underscore-normalized).

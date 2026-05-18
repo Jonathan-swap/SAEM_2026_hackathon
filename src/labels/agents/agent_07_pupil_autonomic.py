@@ -13,7 +13,7 @@ import re
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parents[3] / "derived"
-SRC = HERE / "narratives.jsonl"
+SRC = HERE / "narratives_fourh.jsonl"
 OUT = HERE / "probs_7.csv"
 
 CLASSES = ("kraken", "triton", "coral", "none")

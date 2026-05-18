@@ -127,14 +127,15 @@ old textbook toxidrome mapping and the original PROMPTS.md
 
 Path: `C:\Users\rs3te\Work\Claude-safe\SAEM-Hackathon\SAEM_2026_hackathon\derived\probs_<N>.csv`
 Columns: `encounter_id, p_kraken, p_triton, p_coral, p_none`
-Records: all 261, in the same order as `narratives.jsonl`. Each row
+Records: all 261, in the same order as `narratives_fourh.jsonl`. Each row
 must sum to 1.0 ±0.005 after 3-decimal rounding (renormalize if drift).
 A maximally uncertain encounter ≈ (0.25, 0.25, 0.25, 0.25). A clearly
 non-festival case → p_none ≥ 0.7.
 
 ### Input spec (every agent)
 
-Path: `C:\Users\rs3te\Work\Claude-safe\SAEM-Hackathon\SAEM_2026_hackathon\derived\narratives.jsonl`
+Path: `C:\Users\rs3te\Work\Claude-safe\SAEM-Hackathon\SAEM_2026_hackathon\derived\narratives_fourh.jsonl`
+(Triage-horizon-only variant lives at `derived\narratives_triage.jsonl` — do NOT use it here; the label task needs the 4h narrative blocks.)
 Per-record fields: `encounter_id`, `chief_complaint`, `triage_brief_note`,
 `brief_hpi`, `hpi`, `physical_exam_pertinent_positives` (semicolon-
 delimited token list, 14 finding vocabulary), `mdm`, `clinical_course`,
@@ -176,7 +177,7 @@ evidence.
 
 # Implementation
 
-Use the venv. Write a Python script that reads narratives.jsonl and
+Use the venv. Write a Python script that reads narratives_fourh.jsonl and
 emits the 4 probabilities per record. Verify all 261 rows sum to 1.0
 ±0.005 (renormalize after rounding). Output to probs_1.csv.
 

@@ -16,7 +16,7 @@ import math
 import re
 from pathlib import Path
 
-NARR = Path(r"C:/Users/rs3te/Work/Claude-safe/SAEM-Hackathon/derived/narratives.jsonl")
+NARR = Path(r"C:/Users/rs3te/Work/Claude-safe/SAEM-Hackathon/derived/narratives_fourh.jsonl")
 OUT = Path(r"C:/Users/rs3te/Work/Claude-safe/SAEM-Hackathon/derived/probs_3.csv")
 
 # --- lexicons ---------------------------------------------------------------

@@ -12,7 +12,7 @@ import math
 import re
 from pathlib import Path
 
-INPUT = Path("C:/Users/rs3te/Work/Claude-safe/SAEM-Hackathon/derived/narratives.jsonl")
+INPUT = Path("C:/Users/rs3te/Work/Claude-safe/SAEM-Hackathon/derived/narratives_fourh.jsonl")
 OUTPUT = Path("C:/Users/rs3te/Work/Claude-safe/SAEM-Hackathon/derived/probs_6.csv")
 
 CLASSES = ["p_kraken", "p_triton", "p_coral", "p_none"]

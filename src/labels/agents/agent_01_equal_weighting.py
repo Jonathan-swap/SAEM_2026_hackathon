@@ -1,6 +1,6 @@
 """Agent 1 — Equal Weighting toxidrome classifier.
 
-Reads `derived/narratives.jsonl`, applies equal-weight evidence scoring across
+Reads `derived/narratives_fourh.jsonl`, applies equal-weight evidence scoring across
 the eight narrative fields, and writes `derived/probs_1.csv` with 4-class
 probabilities per encounter.
 
@@ -19,7 +19,7 @@ import re
 from pathlib import Path
 
 ROOT = Path(r"C:\Users\rs3te\Work\Claude-safe\SAEM-Hackathon")
-IN_PATH = ROOT / "derived" / "narratives.jsonl"
+IN_PATH = ROOT / "derived" / "narratives_fourh.jsonl"
 OUT_PATH = ROOT / "derived" / "probs_1.csv"
 
 FIELDS = [
