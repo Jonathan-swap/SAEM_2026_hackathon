@@ -251,10 +251,13 @@ def cluster_one(
     plt.colorbar(sc0, ax=axes[0], label="cluster")
 
     # Centroid markers + convex-hull boundary per cluster on panel 0.
-    # Each centroid is annotated with its TOP-3 candidate ground-
-    # truth labels and their cluster-internal fractions, so the
-    # empirical class mix is visible (no spurious unique-assignment).
+    # In unsupervised_mode the centroid carries only its cluster id
+    # (the clusters ARE the outcomes — no supervised class to display).
+    # In supervised mode the centroid is annotated with its full
+    # candidate-label distribution.
     def _fmt_top3(k: int) -> str:
+        if unsupervised_mode:
+            return f"C{k}"
         lines = [f"C{k}"]
         for cls, frac in cluster_top3[k]:
             lines.append(f"{cls} {frac * 100:.0f}%")
