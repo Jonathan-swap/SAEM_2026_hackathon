@@ -266,7 +266,7 @@ outcome` (exit code 0). Current state: top feature MI = 0.449
 Triton Tabs, Coral Dust}. Sourced from `outcomes.csv` (which in turn
 sources from `Task1_Two_Tier_Input_Data.csv`).
 
-### Six architectures (all retained as options)
+### Seven architectures (all retained; §7h compares 4 of them)
 
 | § | Architecture | Predicts | Cohort | Train script |
 |---|---|---|---|---|
@@ -276,6 +276,7 @@ sources from `Task1_Two_Tier_Input_Data.csv`).
 | **7e** | **Cascade** (tier-1 × tier-2 → 4-class) | None / Kraken / Triton / Coral | all 261 (via cascade) | `src/task1_drug_id/compare_cascade.py` |
 | **7f** | Kraken vs (Triton + Coral) | Kraken / other-drug | 157 drug-positive | `src/task1_drug_id/train_kraken_binary.py` |
 | **7g** | Triton vs Coral | Triton / Coral | 99 non-Kraken drug-positive | `src/task1_drug_id/train_triton_coral.py` |
+| **7h** | Cascade variants A/B/C vs direct | None / K / T / C (via three different cascade compositions) | all 261 | `src/task1_drug_id/compare_cascades.py` |
 
 ### Headline results — all five architectures
 
@@ -636,7 +637,67 @@ discrimination is the **4-hour-horizon feature set** (Task 2's
 `features_fourh.csv`), where the PE binaries appear:
 `pe_reduced_tracking` and `pe_slow_responses` flag Triton;
 `pe_unsteady_gait` and `pe_ataxia` flag Coral (per v6 +
-`research/03_v6_feature_evaluation.md`).
+`research/03_v6_feature_evaluation.md`). The cascade-variant
+comparison in §7h shows that *replacing* the T-vs-C model with a
+prevalence-only split actually **improves** holdout macro AUC.
+
+### 7h. Cascade variants — pick the right way to compose the binaries
+
+What's the best way to assemble the binary classifiers (§7c, §7f,
+§7g) into a full 4-class prediction? Comparison of three cascade
+constructions vs the direct 4-class baseline:
+
+```powershell
+.venv\Scripts\python.exe src\task1_drug_id\compare_cascades.py
+```
+
+Four architectures, same folds + same temporal split, three model
+families:
+
+| Arch | Stage 1 | Stage 2 | Stage 3 (T-vs-C) |
+|---|---|---|---|
+| **D** Direct | one 4-class | — | — |
+| **A** Cascade-A | tier-1 binary | tier-2 multiclass (K/T/C) | (built into stage 2) |
+| **B** Cascade-B | tier-1 binary | Kraken-vs-rest binary | **training prevalence (no model)** |
+| **C** Cascade-C | tier-1 binary | Kraken-vs-rest binary | Triton-vs-Coral binary |
+
+**Temporal holdout macro ROC-AUC (n=74)**:
+
+| Model | D | A | **B** | C | Best |
+|---|---:|---:|---:|---:|---|
+| logreg | 0.600 | 0.609 | **0.660** | 0.608 | B (+0.060) |
+| rforest | 0.689 | 0.708 | **0.719** | 0.712 | B (+0.030) |
+| **hgb** | 0.685 | 0.689 | **0.725** | 0.699 | **B (+0.040)** |
+
+**Cascade B wins on every model.** The single best Task-1 configuration
+in the entire architecture search is now **hgb + Cascade-B**:
+**0.725 macro ROC-AUC** on the holdout — beating the prior
+recommendation (rforest + Cascade-A, 0.712), and direct 4-class
+(0.685 best across hgb / rforest).
+
+**Why prevalence beats a real T-vs-C model**: §7g showed
+Triton-vs-Coral at triage is sub-chance (ROC-AUC 0.32-0.39). A
+sub-chance model is *anti-calibrated* — confident predictions are
+systematically wrong. Replacing it with prevalence (uninformative
+but calibrated) preserves the non-K probability mass without
+adding noise. Cascade B improves *every class*'s AUC on the
+holdout (hgb: ΔNone +0.054, ΔKraken +0.055, ΔTriton +0.020,
+ΔCoral +0.022).
+
+**Per-class deltas vs direct, holdout, hgb:**
+
+| Arch | Δ AUC None | Δ AUC Kraken | Δ AUC Triton | Δ AUC Coral |
+|---|---:|---:|---:|---:|
+| A vs D | +0.002 | −0.029 | +0.013 | +0.046 |
+| **B vs D** | **+0.054** | **+0.055** | **+0.020** | **+0.022** |
+| C vs D | +0.014 | +0.012 | +0.018 | +0.020 |
+
+**Updated deployment recommendation**: **Cascade-B with hgb.**
+Requires two trained models (§7c tier-1 + §7f Kraken-vs-rest) plus
+one scalar prevalence constant. Smaller surface area, better
+calibration, better holdout AUC than the §7e cascade.
+
+Full analysis: [`research/05_cascade_variants.md`](research/05_cascade_variants.md).
 
 ---
 
