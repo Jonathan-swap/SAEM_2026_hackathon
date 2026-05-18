@@ -7,7 +7,7 @@ What does the dataset look like, what have we built, and what new features might
 ## Data
 
 - features_triage.csv: **(261, 66)**
-- features_fourh.csv:  **(261, 467)**
+- features_fourh.csv:  **(261, 472)**
 - probs_avg.csv:       **(261, 12)**  (soft Task-1 labels, argmax distribution shown below)
 - Drug-positive cohort (Task 2): **234 patients**
 
@@ -16,7 +16,7 @@ What does the dataset look like, what have we built, and what new features might
 - Encounters: **261**
 - Date range: `2025-05-18` to `2025-05-22` (5 unique days)
 - Triage features: **66 cols**
-- 4h features:     **467 cols**
+- 4h features:     **472 cols**
 
 ### Numeric vitals + labs (first 25 cols)
 
@@ -257,5 +257,5 @@ Wrote `exploratory_features.csv` (261 rows x 26 cols). Merge into features_triag
 
 - Code: `src/eda/eda_descriptive.py`
 - Seed: 42
-- Libraries: pandas=3.0.3, numpy=2.4.4, scikit-learn=1.8.0, scipy=1.17.1
+- Libraries: pandas=3.0.2, numpy=2.4.4, scikit-learn=1.8.0, scipy=1.17.1
 - Outputs: `eda_descriptive_report.md`, `exploratory_features.csv`, plots in `eda_plots/`

@@ -282,47 +282,53 @@ sources from `Task1_Two_Tier_Input_Data.csv`).
 ### Headline results
 
 **Temporal holdout (last day = test) — 4-class architectures (n=74)
-side-by-side:**
+side-by-side:** (last refreshed 2026-05-18 with the upstream task2
+features ported in: `additional_labs_drawn_4h` + 4 HPI/MDM 4h-only
+features — see §4. Same StratifiedKFold(n_splits=5, shuffle=True,
+random_state=42) and temporal holdout split as prior runs.)
 
 | Architecture | Best model | macro ROC-AUC | macro PR-AUC | accuracy |
 |---|---|---:|---:|---:|
-| Direct 4-class | rforest | 0.697 | 0.408 | 0.392 |
-| Cascade-A (tier-1 + tier-2-multi) | rforest | 0.712 | 0.449 | 0.460 |
-| Cascade-C (tier-1 + K-vs-rest + T-vs-C model) | rforest | 0.712 | 0.454 | 0.446 |
-| **Cascade-B (tier-1 + K-vs-rest + prev)** | **hgb** | **0.725** | **0.447** | **0.432** |
+| Direct 4-class | rforest | 0.703 | 0.429 | 0.392 |
+| Cascade-A (tier-1 + tier-2-multi) | rforest | 0.710 | 0.443 | 0.446 |
+| Cascade-C (tier-1 + K-vs-rest + T-vs-C model) | rforest | 0.707 | 0.444 | 0.473 |
+| **Cascade-B (tier-1 + K-vs-rest + prev)** | **rforest** | **0.721** | **0.441** | **0.473** |
 
-**Cascade-B with hgb is the current deployment champion** — wins on
-macro ROC-AUC across all three model families (logreg +0.060, rforest
-+0.030, hgb +0.040 over direct). See §7h for the comparison details
-and `research/05_cascade_variants.md` for the analysis.
+**Cascade-B is still the deployment champion** — wins 18 of 24
+split × model × metric cells (vs Direct 3/24, Cascade-A 3/24,
+Cascade-C 2/24). The new HPI/MDM 4h features narrowed the lead and
+flipped the best Cascade-B model from hgb to rforest on the temporal
+holdout (rforest 0.721 vs hgb 0.716). Holdout deltas over direct:
+logreg +0.060, rforest +0.018, hgb +0.031. See §7h for the
+comparison details and `research/05_cascade_variants.md`.
 
 **Binary sub-problems (different cohorts and class sets, not directly
 comparable to the 4-class numbers above):**
 
 | Sub-problem | Best model | n test | ROC-AUC | PR-AUC | accuracy |
 |---|---|---:|---:|---:|---:|
-| Tier-1: drug vs no-drug | rforest | 74 | 0.717 | 0.791 | 0.649 |
+| Tier-1: drug vs no-drug | rforest | 74 | 0.723 | 0.791 | 0.649 |
 | Tier-2 multiclass: K/T/C (3-class) | hgb | 45 | 0.678 macro | 0.536 macro | 0.556 |
 | **Kraken vs rest** | **hgb** | 45 | **0.825** | **0.877** | **0.800** |
-| Triton vs Coral | logreg | 21 | **0.389** ⚠ | 0.560 | 0.429 |
+| Triton vs Coral | rforest | 21 | **0.426** ⚠ | 0.611 | 0.476 |
 
 **5-fold CV (4-class architectures, n=261):**
 
 | Architecture | Best model | macro ROC-AUC | macro PR-AUC | accuracy |
 |---|---|---:|---:|---:|
-| Direct 4-class | rforest | 0.677 | 0.365 | 0.433 |
-| Cascade-A (tier-1 + tier-2-multi) | rforest | 0.681 | 0.391 | 0.487 |
-| Cascade-C (tier-1 + K-vs-rest + T-vs-C model) | rforest | 0.677 | 0.389 | 0.487 |
-| **Cascade-B (tier-1 + K-vs-rest + prev)** | rforest | **0.683** | **0.388** | **0.483** |
+| Direct 4-class | rforest | 0.677 | 0.366 | 0.444 |
+| Cascade-A (tier-1 + tier-2-multi) | rforest | 0.679 | 0.385 | 0.506 |
+| Cascade-C (tier-1 + K-vs-rest + T-vs-C model) | rforest | 0.674 | 0.384 | 0.475 |
+| **Cascade-B (tier-1 + K-vs-rest + prev)** | rforest | **0.682** | **0.385** | **0.464** |
 
 **5-fold CV (binary sub-problems):**
 
 | Sub-problem | Best model | n | ROC-AUC | PR-AUC | accuracy |
 |---|---|---:|---:|---:|---:|
-| Tier-1: drug vs no-drug | rforest | 261 | 0.730 | 0.820 | 0.700 |
-| Tier-2 multiclass: K/T/C | rforest | 157 | 0.709 macro | 0.591 macro | 0.528 |
+| Tier-1: drug vs no-drug | rforest | 261 | 0.736 | 0.819 | 0.686 |
+| Tier-2 multiclass: K/T/C | rforest | 157 | 0.715 macro | 0.598 macro | 0.522 |
 | **Kraken vs rest** | **hgb** | 157 | **0.806** | **0.769** | **0.751** |
-| Triton vs Coral | rforest | 99 | **0.506** ⚠ | 0.600 | 0.515 |
+| Triton vs Coral | rforest | 99 | **0.517** ⚠ | 0.599 | 0.515 |
 
 Notes on comparing these numbers:
 - **Direct vs Cascade** are directly comparable — both predict all
@@ -445,17 +451,17 @@ Class prevalence: 60% drug-positive / 40% no-drug.
 
 | Model | log-loss | accuracy | ROC-AUC | PR-AUC | Sens | Spec |
 |-------|---------:|---------:|--------:|-------:|-----:|-----:|
-| logreg | 0.66 | 0.65 | 0.69 | 0.79 | 0.66 | 0.62 |
-| **rforest** | **0.62** | **0.70** | **0.73** | **0.82** | 0.70 | 0.69 |
-| hgb | 0.78 | 0.65 | 0.72 | 0.81 | 0.66 | 0.65 |
+| logreg | 0.84 | 0.64 | 0.65 | 0.72 | 0.66 | 0.62 |
+| **rforest** | **0.60** | **0.69** | **0.74** | **0.82** | 0.71 | 0.66 |
+| hgb | 0.95 | 0.63 | 0.66 | 0.76 | 0.69 | 0.55 |
 
 **Temporal holdout (test = last day, n=74):**
 
 | Model | ROC-AUC | PR-AUC | Sens | Spec | PPV | NPV | BSS |
 |-------|--------:|-------:|-----:|-----:|----:|----:|----:|
 | logreg | 0.678 | 0.731 | 0.67 | 0.59 | 0.71 | 0.53 | −0.025 |
-| **rforest** | **0.717** | **0.791** | 0.62 | **0.69** | **0.76** | 0.54 | **+0.109** |
-| hgb | 0.684 | 0.772 | 0.69 | 0.48 | 0.67 | 0.50 | −0.115 |
+| **rforest** | **0.723** | **0.791** | 0.62 | **0.69** | **0.76** | 0.54 | **+0.120** |
+| hgb | 0.703 | 0.789 | 0.71 | 0.48 | 0.68 | 0.52 | −0.057 |
 
 Test-set prevalence 0.61. The binary task is materially easier than
 the 4-class drug-ID — 0.72 ROC-AUC vs 0.70 — because Kraken's strong
@@ -688,14 +694,15 @@ families:
 | Model | D | A | **B** | C | Best |
 |---|---:|---:|---:|---:|---|
 | logreg | 0.600 | 0.609 | **0.660** | 0.608 | B (+0.060) |
-| rforest | 0.689 | 0.708 | **0.719** | 0.712 | B (+0.030) |
-| **hgb** | 0.685 | 0.689 | **0.725** | 0.699 | **B (+0.040)** |
+| rforest | 0.703 | 0.710 | **0.721** | 0.707 | **B (+0.018)** |
+| hgb | 0.685 | 0.680 | **0.716** | 0.687 | B (+0.031) |
 
-**Cascade B wins on every model.** The single best Task-1 configuration
-in the entire architecture search is now **hgb + Cascade-B**:
-**0.725 macro ROC-AUC** on the holdout — beating the prior
-recommendation (rforest + Cascade-A, 0.712), and direct 4-class
-(0.685 best across hgb / rforest).
+**Cascade B wins on every model.** After re-running the pipeline
+with the upstream task2 features ported in (§4 step 6), the single
+best Task-1 configuration is now **rforest + Cascade-B**:
+**0.721 macro ROC-AUC** on the holdout, narrowly above hgb +
+Cascade-B (0.716). Both beat direct 4-class (0.703 best across the
+three models).
 
 **Why prevalence beats a real T-vs-C model**: §7g showed
 Triton-vs-Coral at triage is sub-chance (ROC-AUC 0.32-0.39). A
@@ -714,10 +721,12 @@ holdout (hgb: ΔNone +0.054, ΔKraken +0.055, ΔTriton +0.020,
 | **B vs D** | **+0.054** | **+0.055** | **+0.020** | **+0.022** |
 | C vs D | +0.014 | +0.012 | +0.018 | +0.020 |
 
-**Updated deployment recommendation**: **Cascade-B with hgb.**
-Requires two trained models (§7c tier-1 + §7f Kraken-vs-rest) plus
-one scalar prevalence constant. Smaller surface area, better
-calibration, better holdout AUC than the §7e cascade.
+**Updated deployment recommendation**: **Cascade-B with rforest**
+(0.721 holdout) is the new champion, with hgb (0.716) a close second
+that's worth keeping as a calibration alternative. Both require two
+trained models (§7c tier-1 + §7f Kraken-vs-rest) plus one scalar
+prevalence constant. Smaller surface area, better calibration,
+better holdout AUC than the §7e cascade.
 
 Full analysis: [`research/05_cascade_variants.md`](research/05_cascade_variants.md).
 
@@ -739,10 +748,10 @@ macro ROC-AUC, macro PR-AUC, accuracy, log-loss):
 
 | Architecture | Wins | Win rate |
 |---|---:|---:|
-| **Cascade B** (tier-1 + K-vs-rest + prev) | **19** | **79%** |
-| Cascade A (tier-1 + tier-2-multi) | 4 | 17% |
+| **Cascade B** (tier-1 + K-vs-rest + prev) | **18** | **75%** |
+| Cascade A (tier-1 + tier-2-multi) | 3 | 12% |
 | Direct 4-class | 3 | 12% |
-| Cascade C (tier-1 + K-vs-rest + T-vs-C model) | 3 | 12% |
+| Cascade C (tier-1 + K-vs-rest + T-vs-C model) | 2 | 8% |
 
 **Consistency** — does each cascade beat direct on **both** CV and
 holdout?
@@ -752,12 +761,12 @@ holdout?
 | logreg | A | −0.013 | +0.008 | no |
 | **logreg** | **B** | **+0.001** | **+0.060** | **YES** |
 | logreg | C | −0.019 | +0.007 | no |
-| **rforest** | **A** | **+0.004** | **+0.019** | **YES** |
-| **rforest** | **B** | **+0.005** | **+0.030** | **YES** |
-| rforest | C | −0.000 | +0.023 | no |
-| hgb | A | −0.022 | +0.005 | no |
-| **hgb** | **B** | **+0.027** | **+0.040** | **YES** ← biggest mean Δ |
-| hgb | C | −0.002 | +0.014 | no |
+| **rforest** | **A** | **+0.002** | **+0.007** | **YES** |
+| **rforest** | **B** | **+0.005** | **+0.018** | **YES** |
+| rforest | C | −0.003 | +0.004 | no |
+| hgb | A | −0.022 | −0.005 | no |
+| **hgb** | **B** | **+0.027** | **+0.031** | **YES** ← biggest mean Δ |
+| hgb | C | −0.002 | +0.002 | no |
 
 **Four (model × cascade) pairs are consistent winners; three of the
 four are Cascade B.** hgb × Cascade B has the largest mean Δ across
@@ -769,10 +778,10 @@ will land best on Phase-2 data):
 
 | Architecture | Mean (holdout) | Std | Spread |
 |---|---:|---:|---:|
-| **Cascade B** | **0.702** | **0.029** | **0.065** ← tightest |
-| Direct | 0.658 | 0.041 | 0.089 |
-| Cascade A | 0.669 | 0.043 | 0.099 |
-| Cascade C | 0.673 | 0.046 | 0.105 |
+| **Cascade B** | **0.699** | **0.025** | **0.061** ← tightest |
+| Direct | 0.663 | 0.038 | 0.085 |
+| Cascade A | 0.666 | 0.041 | 0.101 |
+| Cascade C | 0.667 | 0.041 | 0.099 |
 
 Cascade B not only has the highest mean holdout AUC, it has the
 **lowest variance** across logreg/rforest/hgb — switching model
@@ -793,9 +802,12 @@ prevalence-based T/C split is more discriminating than any fitted
 T-vs-C model. Cascade A wins None (because tier-1's binary
 predictions feed both architectures equally, but A's softer 4-class
 output produces better None calibration than B's sharper
-"1 − P(drug)" decision boundary). The auto-generated recommendation
-balances all four classes via macro AUC and lands on **hgb ×
-Cascade-B**.
+"1 − P(drug)" decision boundary). The `evaluate_cascades.py`
+auto-recommendation maximises mean Δ vs direct (favouring the
+biggest *improvement*) and lands on **logreg × Cascade-B** (+0.031
+mean); the **deployment** recommendation maximises raw holdout AUC
+and lands on **rforest × Cascade-B** (0.721 holdout, +0.018 over
+direct). Both are documented; pick by your decision criterion.
 
 ---
 
@@ -843,27 +855,29 @@ Artifacts (WITH-probs variant overrides):
 
 | Model | log-loss | accuracy | macro ROC-AUC | macro PR-AUC |
 |-------|---------:|---------:|--------------:|-------------:|
-| logreg | 0.41 | 0.91 | 0.888 | 0.830 |
-| **rforest** | **0.35** | **0.92** | **0.924** | **0.887** |
-| hgb | 0.64 | 0.83 | 0.877 | 0.692 |
+| logreg | 0.42 | 0.91 | 0.888 | 0.831 |
+| **rforest** | **0.34** | **0.91** | **0.932** | **0.897** |
+| hgb | 0.61 | 0.83 | 0.882 | 0.713 |
 
-Class prevalence: Discharge 0.77 / Floor 0.14 / ICU 0.09.
+Class prevalence: Discharge 0.77 / Floor 0.14 / ICU 0.09. The new 4h
+HPI/MDM features (§4 step 6) lifted rforest macro AUC 0.924 → 0.932
+and macro PR-AUC 0.887 → 0.897 vs the prior run.
 
 **Per-class metrics for rforest (drug-positive, n=157):**
 
 | Class | Prevalence | ROC-AUC | PR-AUC | Brier | BSS |
 |---|---:|---:|---:|---:|---:|
-| Discharge | 0.77 | 0.929 | 0.963 | 0.066 | **+0.622** |
-| Floor | 0.14 | 0.934 | 0.834 | 0.060 | **+0.485** |
-| ICU | 0.09 | 0.908 | 0.863 | 0.032 | **+0.613** |
+| Discharge | 0.77 | 0.932 | 0.967 | 0.065 | **+0.629** |
+| Floor | 0.14 | 0.945 | 0.856 | 0.060 | **+0.491** |
+| ICU | 0.09 | 0.903 | 0.883 | 0.032 | **+0.611** |
 
 **All-patients cohort (n=261, with-probs variant)**:
 
 | Model | log-loss | accuracy | macro ROC-AUC | macro PR-AUC |
 |-------|---------:|---------:|--------------:|-------------:|
-| logreg | 0.64 | 0.84 | 0.911 | 0.820 |
-| **rforest** | **0.34** | **0.90** | **0.949** | **0.896** |
-| hgb | 0.45 | 0.90 | 0.941 | 0.874 |
+| logreg | 0.65 | 0.84 | 0.911 | 0.820 |
+| **rforest** | **0.34** | **0.91** | **0.950** | **0.893** |
+| hgb | 0.46 | 0.89 | 0.934 | 0.868 |
 
 Class prevalence on full cohort: Discharge 0.66 / Floor 0.20 / ICU 0.15.
 
@@ -871,9 +885,9 @@ Class prevalence on full cohort: Discharge 0.66 / Floor 0.20 / ICU 0.15.
 
 | Class | Prevalence | ROC-AUC | PR-AUC | Brier | BSS |
 |---|---:|---:|---:|---:|---:|
-| Discharge | 0.66 | 0.954 | 0.961 | 0.059 | **+0.739** |
-| Floor | 0.20 | 0.948 | 0.843 | 0.067 | **+0.582** |
-| ICU | 0.15 | 0.946 | 0.883 | 0.034 | **+0.723** |
+| Discharge | 0.66 | 0.952 | 0.956 | 0.059 | **+0.738** |
+| Floor | 0.20 | 0.946 | 0.839 | 0.066 | **+0.585** |
+| ICU | 0.15 | 0.952 | 0.883 | 0.034 | **+0.727** |
 
 Disposition distribution on the full cohort: Discharge 171 (66%) /
 Floor 52 (20%) / ICU 38 (15%). The all-patients macro AUC is
@@ -904,9 +918,9 @@ Artifacts (Task 2): `derived/task2_temporal_summary.csv` +
 
 | Model | log-loss | accuracy | macro ROC-AUC | macro PR-AUC |
 |-------|---------:|---------:|--------------:|-------------:|
-| logreg | 0.32 | 0.89 | 0.957 | 0.884 |
-| **rforest** | **0.32** | **0.89** | **0.985** | **0.952** |
-| hgb | 0.58 | 0.87 | 0.870 | 0.647 |
+| logreg | 0.32 | 0.89 | 0.959 | 0.885 |
+| **rforest** | **0.32** | **0.89** | **0.980** | **0.933** |
+| hgb | 0.54 | 0.87 | 0.888 | 0.669 |
 
 Test-set class prevalence: Discharge 0.73 / Floor 0.16 / ICU 0.11.
 
@@ -914,31 +928,33 @@ Test-set class prevalence: Discharge 0.73 / Floor 0.16 / ICU 0.11.
 
 | Class | Prevalence | ROC-AUC | PR-AUC | Brier | BSS |
 |---|---:|---:|---:|---:|---:|
-| Discharge | 0.73 | 0.992 | 0.997 | 0.054 | **+0.722** |
-| Floor | 0.16 | 0.962 | 0.858 | 0.070 | **+0.464** |
-| ICU | 0.11 | **1.000** | **1.000** | 0.037 | **+0.626** |
+| Discharge | 0.73 | 0.990 | 0.996 | 0.054 | **+0.724** |
+| Floor | 0.16 | 0.955 | 0.836 | 0.074 | **+0.437** |
+| ICU | 0.11 | 0.995 | 0.967 | 0.038 | **+0.615** |
 
 **All-patients holdout (n=261, test = last day n=74)** — `task2_temporal_summary_all.csv`:
 
 | Model | log-loss | accuracy | macro ROC-AUC | macro PR-AUC |
 |-------|---------:|---------:|--------------:|-------------:|
-| logreg | — | — | 0.920 | 0.836 |
-| **rforest** | — | — | **0.989** | **0.971** |
-| hgb | — | — | 0.972 | 0.922 |
+| logreg | 0.51 | 0.81 | 0.921 | 0.844 |
+| **rforest** | **0.28** | **0.91** | **0.988** | **0.969** |
+| hgb | 0.29 | 0.88 | 0.972 | 0.920 |
 
 Task 2 generalises even better when None-class is included
-(0.989 vs 0.985 drug-positive) — the additional Discharge-heavy
+(0.988 vs 0.980 drug-positive) — the additional Discharge-heavy
 None patients provide more high-confidence negatives without
 hurting Floor/ICU discrimination.
 
-Task-2 holdout rforest hits **0.985 macro ROC-AUC and 0.952 macro
-PR-AUC** on the peak festival day. ICU-class ROC-AUC and PR-AUC
-both hit **1.00** — every ICU case in the test set ranks above
-every non-ICU case. All three BSS values are firmly positive
-(+0.47 to +0.73): the model beats climatology by roughly half of
-the theoretical maximum improvement. The severity-anchored
-features (peak_lactate, peak_CPK, peak_troponin, peak_HR,
-peak_temp) transfer cleanly from training days to the holdout.
+Task-2 holdout rforest hits **0.980 macro ROC-AUC and 0.933 macro
+PR-AUC** on the peak festival day. ICU-class ROC-AUC is **0.995**
+and PR-AUC **0.967** — every ICU case in the test set ranks at or
+near the top of the predicted-ICU score. All three BSS values are
+firmly positive (+0.44 to +0.72): the model beats climatology by
+roughly half of the theoretical maximum improvement. The
+severity-anchored features (peak_lactate, peak_CPK, peak_troponin,
+peak_HR, peak_temp) transfer cleanly from training days to the
+holdout; the new HPI/MDM 4h features (§4 step 6) added marginal
+noise on this specific split but improved CV-side numbers (§8a).
 
 ---
 

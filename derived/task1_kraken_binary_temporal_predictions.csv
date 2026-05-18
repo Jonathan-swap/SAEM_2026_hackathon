@@ -1,94 +1,94 @@
 model,encounter_id,true_label,p_kraken,pred_label
-logreg,E000143,Other drug (Triton/Coral),0.34867536110345737,Other drug (Triton/Coral)
+logreg,E000143,Other drug (Triton/Coral),0.3486753611034565,Other drug (Triton/Coral)
 logreg,E001372,Kraken Candy,0.8616906519601403,Kraken Candy
-logreg,E001311,Kraken Candy,0.5896685960731145,Kraken Candy
+logreg,E001311,Kraken Candy,0.5896685960731114,Kraken Candy
 logreg,E001652,Kraken Candy,0.9989790894281575,Kraken Candy
-logreg,E001666,Other drug (Triton/Coral),0.0847698431854687,Other drug (Triton/Coral)
-logreg,E000701,Other drug (Triton/Coral),0.3902758308350683,Other drug (Triton/Coral)
-logreg,E000749,Other drug (Triton/Coral),0.21853917094911188,Other drug (Triton/Coral)
-logreg,E000841,Kraken Candy,0.09486944793457737,Other drug (Triton/Coral)
-logreg,E000859,Other drug (Triton/Coral),0.2474461351243911,Other drug (Triton/Coral)
-logreg,E001427,Other drug (Triton/Coral),0.028629159700063144,Other drug (Triton/Coral)
-logreg,E001238,Kraken Candy,0.006155116992285377,Other drug (Triton/Coral)
-logreg,E001927,Other drug (Triton/Coral),0.01516187853579756,Other drug (Triton/Coral)
-logreg,E000087,Other drug (Triton/Coral),0.8326179969335136,Kraken Candy
-logreg,E000185,Kraken Candy,0.9254969021277986,Kraken Candy
-logreg,E001007,Kraken Candy,0.30017323676406826,Other drug (Triton/Coral)
-logreg,E000996,Kraken Candy,0.0037206612343152756,Other drug (Triton/Coral)
-logreg,E000047,Other drug (Triton/Coral),0.11828528982631238,Other drug (Triton/Coral)
-logreg,E000065,Other drug (Triton/Coral),0.6644882197087654,Kraken Candy
-logreg,E002165,Kraken Candy,0.020781279152008475,Other drug (Triton/Coral)
+logreg,E001666,Other drug (Triton/Coral),0.0847698431854684,Other drug (Triton/Coral)
+logreg,E000701,Other drug (Triton/Coral),0.390275830835066,Other drug (Triton/Coral)
+logreg,E000749,Other drug (Triton/Coral),0.21853917094911268,Other drug (Triton/Coral)
+logreg,E000841,Kraken Candy,0.09486944793457872,Other drug (Triton/Coral)
+logreg,E000859,Other drug (Triton/Coral),0.24744613512438984,Other drug (Triton/Coral)
+logreg,E001427,Other drug (Triton/Coral),0.028629159700062363,Other drug (Triton/Coral)
+logreg,E001238,Kraken Candy,0.006155116992285365,Other drug (Triton/Coral)
+logreg,E001927,Other drug (Triton/Coral),0.015161878535797294,Other drug (Triton/Coral)
+logreg,E000087,Other drug (Triton/Coral),0.83261799693351,Kraken Candy
+logreg,E000185,Kraken Candy,0.9254969021277973,Kraken Candy
+logreg,E001007,Kraken Candy,0.3001732367640748,Other drug (Triton/Coral)
+logreg,E000996,Kraken Candy,0.0037206612343152526,Other drug (Triton/Coral)
+logreg,E000047,Other drug (Triton/Coral),0.11828528982631291,Other drug (Triton/Coral)
+logreg,E000065,Other drug (Triton/Coral),0.6644882197087627,Kraken Candy
+logreg,E002165,Kraken Candy,0.02078127915200834,Other drug (Triton/Coral)
 logreg,E001549,Kraken Candy,0.9638437604069845,Kraken Candy
 logreg,E002013,Kraken Candy,0.773306741533149,Kraken Candy
-logreg,E001539,Other drug (Triton/Coral),0.005292833383910607,Other drug (Triton/Coral)
-logreg,E001305,Kraken Candy,0.002610845503902283,Other drug (Triton/Coral)
-logreg,E002047,Kraken Candy,0.6360956384007797,Kraken Candy
-logreg,E002159,Other drug (Triton/Coral),0.018336842145977285,Other drug (Triton/Coral)
+logreg,E001539,Other drug (Triton/Coral),0.005292833383910625,Other drug (Triton/Coral)
+logreg,E001305,Kraken Candy,0.0026108455039022616,Other drug (Triton/Coral)
+logreg,E002047,Kraken Candy,0.6360956384007719,Kraken Candy
+logreg,E002159,Other drug (Triton/Coral),0.018336842145977167,Other drug (Triton/Coral)
 logreg,E000849,Kraken Candy,0.9998693170539412,Kraken Candy
-logreg,E001711,Kraken Candy,0.28850523068802103,Other drug (Triton/Coral)
-logreg,E001947,Kraken Candy,0.9407737441494137,Kraken Candy
-logreg,E000345,Other drug (Triton/Coral),0.1896654710185927,Other drug (Triton/Coral)
-logreg,E000847,Other drug (Triton/Coral),0.0931088018937676,Other drug (Triton/Coral)
-logreg,E001286,Other drug (Triton/Coral),0.09361292971884175,Other drug (Triton/Coral)
-logreg,E000771,Kraken Candy,0.013743384090584246,Other drug (Triton/Coral)
-logreg,E001330,Other drug (Triton/Coral),0.23353514598570987,Other drug (Triton/Coral)
-logreg,E001213,Kraken Candy,0.2435156146952756,Other drug (Triton/Coral)
-logreg,E000780,Other drug (Triton/Coral),0.5486285527275626,Kraken Candy
-logreg,E000129,Other drug (Triton/Coral),0.0768534267500442,Other drug (Triton/Coral)
-logreg,E000554,Kraken Candy,0.9766362601979093,Kraken Candy
-logreg,E001381,Kraken Candy,0.038923469270430916,Other drug (Triton/Coral)
-logreg,E000357,Kraken Candy,0.9617509921128292,Kraken Candy
-logreg,E001568,Other drug (Triton/Coral),0.2710987887344702,Other drug (Triton/Coral)
-logreg,E000720,Kraken Candy,0.1892257718619892,Other drug (Triton/Coral)
-logreg,E000700,Other drug (Triton/Coral),0.44997213341127423,Other drug (Triton/Coral)
-logreg,E000119,Kraken Candy,0.013654765863118975,Other drug (Triton/Coral)
+logreg,E001711,Kraken Candy,0.2885052306880229,Other drug (Triton/Coral)
+logreg,E001947,Kraken Candy,0.9407737441494131,Kraken Candy
+logreg,E000345,Other drug (Triton/Coral),0.1896654710185919,Other drug (Triton/Coral)
+logreg,E000847,Other drug (Triton/Coral),0.09310880189376618,Other drug (Triton/Coral)
+logreg,E001286,Other drug (Triton/Coral),0.09361292971884144,Other drug (Triton/Coral)
+logreg,E000771,Kraken Candy,0.01374338409058427,Other drug (Triton/Coral)
+logreg,E001330,Other drug (Triton/Coral),0.23353514598570854,Other drug (Triton/Coral)
+logreg,E001213,Kraken Candy,0.24351561469527555,Other drug (Triton/Coral)
+logreg,E000780,Other drug (Triton/Coral),0.5486285527275628,Kraken Candy
+logreg,E000129,Other drug (Triton/Coral),0.07685342675004446,Other drug (Triton/Coral)
+logreg,E000554,Kraken Candy,0.9766362601979097,Kraken Candy
+logreg,E001381,Kraken Candy,0.03892346927043166,Other drug (Triton/Coral)
+logreg,E000357,Kraken Candy,0.9617509921128291,Kraken Candy
+logreg,E001568,Other drug (Triton/Coral),0.27109878873447185,Other drug (Triton/Coral)
+logreg,E000720,Kraken Candy,0.1892257718619879,Other drug (Triton/Coral)
+logreg,E000700,Other drug (Triton/Coral),0.44997213341127346,Other drug (Triton/Coral)
+logreg,E000119,Kraken Candy,0.013654765863119296,Other drug (Triton/Coral)
 logreg,E001684,Kraken Candy,0.995075230078866,Kraken Candy
-logreg,E001094,Other drug (Triton/Coral),0.046760940768407,Other drug (Triton/Coral)
-rforest,E000143,Other drug (Triton/Coral),0.31410635353173,Other drug (Triton/Coral)
-rforest,E001372,Kraken Candy,0.7058847282116238,Kraken Candy
-rforest,E001311,Kraken Candy,0.4367272987840788,Other drug (Triton/Coral)
-rforest,E001652,Kraken Candy,0.7778459629847915,Kraken Candy
-rforest,E001666,Other drug (Triton/Coral),0.34890969033078467,Other drug (Triton/Coral)
-rforest,E000701,Other drug (Triton/Coral),0.18812170266472308,Other drug (Triton/Coral)
-rforest,E000749,Other drug (Triton/Coral),0.34529887321583375,Other drug (Triton/Coral)
-rforest,E000841,Kraken Candy,0.31026748351013383,Other drug (Triton/Coral)
-rforest,E000859,Other drug (Triton/Coral),0.25254914798262,Other drug (Triton/Coral)
-rforest,E001427,Other drug (Triton/Coral),0.19873577400975642,Other drug (Triton/Coral)
-rforest,E001238,Kraken Candy,0.2339164176950578,Other drug (Triton/Coral)
-rforest,E001927,Other drug (Triton/Coral),0.2489051886196994,Other drug (Triton/Coral)
-rforest,E000087,Other drug (Triton/Coral),0.5964543502569923,Kraken Candy
-rforest,E000185,Kraken Candy,0.48558953959462925,Other drug (Triton/Coral)
-rforest,E001007,Kraken Candy,0.5616695534594784,Kraken Candy
-rforest,E000996,Kraken Candy,0.19695252581773423,Other drug (Triton/Coral)
-rforest,E000047,Other drug (Triton/Coral),0.3183998318108714,Other drug (Triton/Coral)
-rforest,E000065,Other drug (Triton/Coral),0.1569449136374876,Other drug (Triton/Coral)
-rforest,E002165,Kraken Candy,0.3917481871299719,Other drug (Triton/Coral)
-rforest,E001549,Kraken Candy,0.858723730687183,Kraken Candy
-rforest,E002013,Kraken Candy,0.49452919183873456,Other drug (Triton/Coral)
-rforest,E001539,Other drug (Triton/Coral),0.30306488733953235,Other drug (Triton/Coral)
-rforest,E001305,Kraken Candy,0.1481921999801058,Other drug (Triton/Coral)
-rforest,E002047,Kraken Candy,0.32500812017749825,Other drug (Triton/Coral)
-rforest,E002159,Other drug (Triton/Coral),0.2027669161607972,Other drug (Triton/Coral)
-rforest,E000849,Kraken Candy,0.8916964551212554,Kraken Candy
-rforest,E001711,Kraken Candy,0.6640609843596852,Kraken Candy
-rforest,E001947,Kraken Candy,0.6203916609473329,Kraken Candy
-rforest,E000345,Other drug (Triton/Coral),0.20002954199915746,Other drug (Triton/Coral)
-rforest,E000847,Other drug (Triton/Coral),0.0969270582710885,Other drug (Triton/Coral)
-rforest,E001286,Other drug (Triton/Coral),0.20588814702869437,Other drug (Triton/Coral)
-rforest,E000771,Kraken Candy,0.5243051656923512,Kraken Candy
-rforest,E001330,Other drug (Triton/Coral),0.2196152870751767,Other drug (Triton/Coral)
-rforest,E001213,Kraken Candy,0.4059000954931619,Other drug (Triton/Coral)
-rforest,E000780,Other drug (Triton/Coral),0.19020437900557513,Other drug (Triton/Coral)
-rforest,E000129,Other drug (Triton/Coral),0.15663285972259777,Other drug (Triton/Coral)
-rforest,E000554,Kraken Candy,0.6136900933373893,Kraken Candy
-rforest,E001381,Kraken Candy,0.5143598196100257,Kraken Candy
-rforest,E000357,Kraken Candy,0.575499032744116,Kraken Candy
-rforest,E001568,Other drug (Triton/Coral),0.5946527571643787,Kraken Candy
-rforest,E000720,Kraken Candy,0.09047010069607478,Other drug (Triton/Coral)
-rforest,E000700,Other drug (Triton/Coral),0.49490724998908164,Other drug (Triton/Coral)
-rforest,E000119,Kraken Candy,0.4384664975847306,Other drug (Triton/Coral)
-rforest,E001684,Kraken Candy,0.8528739819744341,Kraken Candy
-rforest,E001094,Other drug (Triton/Coral),0.4763294632232723,Other drug (Triton/Coral)
+logreg,E001094,Other drug (Triton/Coral),0.04676094076840849,Other drug (Triton/Coral)
+rforest,E000143,Other drug (Triton/Coral),0.31178828521823293,Other drug (Triton/Coral)
+rforest,E001372,Kraken Candy,0.6394739622154687,Kraken Candy
+rforest,E001311,Kraken Candy,0.4599861951574332,Other drug (Triton/Coral)
+rforest,E001652,Kraken Candy,0.7266417024437615,Kraken Candy
+rforest,E001666,Other drug (Triton/Coral),0.34381016775804296,Other drug (Triton/Coral)
+rforest,E000701,Other drug (Triton/Coral),0.168692549787865,Other drug (Triton/Coral)
+rforest,E000749,Other drug (Triton/Coral),0.3773179296323981,Other drug (Triton/Coral)
+rforest,E000841,Kraken Candy,0.35061966526644717,Other drug (Triton/Coral)
+rforest,E000859,Other drug (Triton/Coral),0.26615597507638766,Other drug (Triton/Coral)
+rforest,E001427,Other drug (Triton/Coral),0.18835914312433807,Other drug (Triton/Coral)
+rforest,E001238,Kraken Candy,0.23075635743346415,Other drug (Triton/Coral)
+rforest,E001927,Other drug (Triton/Coral),0.2489587753685762,Other drug (Triton/Coral)
+rforest,E000087,Other drug (Triton/Coral),0.5777862481550909,Kraken Candy
+rforest,E000185,Kraken Candy,0.4424153265971678,Other drug (Triton/Coral)
+rforest,E001007,Kraken Candy,0.5759739269500205,Kraken Candy
+rforest,E000996,Kraken Candy,0.2402633933345807,Other drug (Triton/Coral)
+rforest,E000047,Other drug (Triton/Coral),0.3021270428145388,Other drug (Triton/Coral)
+rforest,E000065,Other drug (Triton/Coral),0.17640912142205273,Other drug (Triton/Coral)
+rforest,E002165,Kraken Candy,0.3796376919597508,Other drug (Triton/Coral)
+rforest,E001549,Kraken Candy,0.8682104671672681,Kraken Candy
+rforest,E002013,Kraken Candy,0.48923087837441576,Other drug (Triton/Coral)
+rforest,E001539,Other drug (Triton/Coral),0.3149763185753481,Other drug (Triton/Coral)
+rforest,E001305,Kraken Candy,0.16059963099192387,Other drug (Triton/Coral)
+rforest,E002047,Kraken Candy,0.3111094109104041,Other drug (Triton/Coral)
+rforest,E002159,Other drug (Triton/Coral),0.2174908122176416,Other drug (Triton/Coral)
+rforest,E000849,Kraken Candy,0.8905832784925914,Kraken Candy
+rforest,E001711,Kraken Candy,0.6430552407709841,Kraken Candy
+rforest,E001947,Kraken Candy,0.6022023348975587,Kraken Candy
+rforest,E000345,Other drug (Triton/Coral),0.18506473149664784,Other drug (Triton/Coral)
+rforest,E000847,Other drug (Triton/Coral),0.11780553236959936,Other drug (Triton/Coral)
+rforest,E001286,Other drug (Triton/Coral),0.20413725049995893,Other drug (Triton/Coral)
+rforest,E000771,Kraken Candy,0.4819842620421903,Other drug (Triton/Coral)
+rforest,E001330,Other drug (Triton/Coral),0.21022169412861913,Other drug (Triton/Coral)
+rforest,E001213,Kraken Candy,0.42450535338716,Other drug (Triton/Coral)
+rforest,E000780,Other drug (Triton/Coral),0.19719083795110504,Other drug (Triton/Coral)
+rforest,E000129,Other drug (Triton/Coral),0.13372242906050588,Other drug (Triton/Coral)
+rforest,E000554,Kraken Candy,0.6197801809738108,Kraken Candy
+rforest,E001381,Kraken Candy,0.49966287206863774,Other drug (Triton/Coral)
+rforest,E000357,Kraken Candy,0.5641151207059485,Kraken Candy
+rforest,E001568,Other drug (Triton/Coral),0.5805320726490835,Kraken Candy
+rforest,E000720,Kraken Candy,0.09335382056873476,Other drug (Triton/Coral)
+rforest,E000700,Other drug (Triton/Coral),0.4717103149846158,Other drug (Triton/Coral)
+rforest,E000119,Kraken Candy,0.417397280439125,Other drug (Triton/Coral)
+rforest,E001684,Kraken Candy,0.8534882976704856,Kraken Candy
+rforest,E001094,Other drug (Triton/Coral),0.4913864500928578,Other drug (Triton/Coral)
 hgb,E000143,Other drug (Triton/Coral),0.48821321822505237,Other drug (Triton/Coral)
 hgb,E001372,Kraken Candy,0.9708177650168134,Kraken Candy
 hgb,E001311,Kraken Candy,0.5361706236098852,Kraken Candy
