@@ -375,6 +375,64 @@ the 4-class drug-ID — 0.72 ROC-AUC vs 0.70 — because Kraken's strong
 sympathomimetic triage signature is shared by the easier-to-detect
 "drug-positive" superset.
 
+### 7d. Tier-2 classifier — which drug? (Kraken / Triton / Coral)
+
+The natural pair to §7c. Given a patient is drug-positive, classify
+which of the three festival drugs. Cohort filter:
+`outcomes.csv :: ground_truth_drug != 0` → 157 patients.
+
+```powershell
+.venv\Scripts\python.exe src\task1_drug_id\train_tier2.py
+```
+
+Runs both 5-fold CV and temporal holdout. Artifacts:
+- `derived/task1_tier2_baseline_summary.csv` (CV)
+- `derived/task1_tier2_oof_predictions.csv`
+- `derived/task1_tier2_temporal_summary.csv`
+- `derived/task1_tier2_temporal_predictions.csv`
+
+Class prevalence on cohort: Kraken 0.37 / Triton 0.32 / Coral 0.31.
+
+**5-fold CV (n=157):**
+
+| Model | log-loss | accuracy | macro ROC-AUC | macro PR-AUC |
+|-------|---------:|---------:|--------------:|-------------:|
+| logreg | 1.65 | 0.50 | 0.641 | 0.530 |
+| **rforest** | **0.96** | **0.53** | **0.709** | **0.591** |
+| hgb | 1.58 | 0.52 | 0.667 | 0.539 |
+
+**Per-class metrics (rforest, 5-fold CV):**
+
+| Class | Prevalence | ROC-AUC | PR-AUC | Brier | BSS |
+|---|---:|---:|---:|---:|---:|
+| Kraken | 0.37 | 0.809 | 0.769 | 0.170 | **+0.270** |
+| Triton | 0.32 | 0.714 | 0.588 | 0.193 | **+0.120** |
+| Coral | 0.31 | 0.605 | 0.417 | 0.208 | +0.018 |
+
+**Temporal holdout (test = last day, n=45):**
+
+| Model | log-loss | accuracy | macro ROC-AUC | macro PR-AUC |
+|-------|---------:|---------:|--------------:|-------------:|
+| logreg | 2.03 | 0.42 | 0.594 | 0.480 |
+| rforest | 1.00 | 0.51 | 0.666 | 0.505 |
+| **hgb** | 1.38 | **0.56** | **0.678** | **0.536** |
+
+**Per-class metrics (hgb, holdout):**
+
+| Class | Prevalence | ROC-AUC | PR-AUC | Brier | BSS |
+|---|---:|---:|---:|---:|---:|
+| Kraken | 0.53 | **0.802** | **0.843** | 0.199 | **+0.200** |
+| Triton | 0.27 | 0.687 | 0.525 | 0.239 | −0.224 |
+| Coral | 0.20 | 0.546 | 0.240 | 0.243 | −0.518 |
+
+The Kraken column drives most of the lift. Triton and Coral's
+defining tokens ("ringing in ears", "time distortion sensation")
+appear in HPI/MDM only — not in `triage_brief_note` — so any
+triage-only classifier hits a ceiling for those two. Pairing this
+tier-2 with a Task-2 4h-horizon model gives much better discrimination
+because the 4h PE findings (reduced_tracking, slow_responses for
+Triton; unsteady_gait for Coral) finally become visible.
+
 ---
 
 ## 8. Train + evaluate Task 2 (4h deterioration)
