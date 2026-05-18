@@ -17,7 +17,7 @@ Picked decision thresholds (frozen from the macro-F1 optimum on
   tau_drug   = 0.57
   tau_kraken = 0.45
 
-Artifacts written to production/ (sibling of src/, derived/, data/):
+Artifacts written to production/task1/ (sibling of production/task2/):
   preprocessor.joblib            ColumnTransformer fitted on all 261
   tier1_model.joblib             rforest, P(drug+) on all 261
   kraken_vs_rest_model.joblib    rforest, P(K | drug+) on all 157
@@ -52,7 +52,7 @@ from sklearn.preprocessing import OneHotEncoder, StandardScaler
 
 ROOT = Path(__file__).resolve().parents[2]
 DERIVED = ROOT / "derived"
-PRODUCTION = ROOT / "production"
+PRODUCTION = ROOT / "production" / "task1"
 
 CLASS_NAMES = ["None", "Kraken Candy", "Triton Tabs", "Coral Dust"]
 NONE_IDX, KRAKEN_IDX, TRITON_IDX, CORAL_IDX = 0, 1, 2, 3
