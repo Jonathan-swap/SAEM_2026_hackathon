@@ -1,10 +1,12 @@
 # Runbook — SAEM Hackathon Pipeline
 
 End-to-end execution from raw xlsx → trained, evaluated Task-1 /
-Task-2 / Task-3 models, plus the v6 feature audit, task-aligned
-clustering, and temporal-holdout evaluation. Every command runs from
-the repo root (`SAEM_2026_hackathon/`). PowerShell on Windows;
-substitute `.venv/bin/python` on macOS/Linux.
+Task-2 / Task-3 models with both **5-fold cross-validation** (§7a /
+§8a) and **temporal holdout** (§7b / §8b, train on early days, test
+on last day — the deployment-relevant metric). Plus v6 feature
+audit, task-aligned clustering. Every command runs from the repo
+root (`SAEM_2026_hackathon/`). PowerShell on Windows; substitute
+`.venv/bin/python` on macOS/Linux.
 
 ---
 
@@ -196,17 +198,17 @@ This is your reproducibility check.
 
 ## 7. Train + evaluate Task 1 (drug ID at triage)
 
+Two evaluation modes are available, both leakage-clean and using
+the manual ground truth + v6 features:
+
+### 7a. 5-fold stratified cross-validation (random folds, all 261 patients)
+
 ```powershell
 .venv\Scripts\python.exe src\task1_drug_id\train_baseline.py
 ```
 
-5-fold stratified CV. Three models (logreg, rforest, hgb).
-
-Artifacts:
-- `derived/task1_baseline_summary.csv`
-- `derived/task1_oof_predictions.csv`
-
-Current numbers (leakage-clean, manual ground truth, v6 features):
+Three models (logreg, rforest, hgb). Artifacts:
+`derived/task1_baseline_summary.csv` + `task1_oof_predictions.csv`.
 
 | Model | log-loss | accuracy | macro AUC |
 |-------|---------:|---------:|----------:|
@@ -216,32 +218,83 @@ Current numbers (leakage-clean, manual ground truth, v6 features):
 
 Majority-class baseline accuracy = 0.40.
 
+### 7b. Temporal holdout (train on early days, test on last day) — **deployment-relevant**
+
+Split: train on every encounter with `encounter_arrival_date < last_day`;
+test on the last day's encounters only. With the 5-day release this is
+**187 train / 74 test**. Mirrors the Phase-2 deployment scenario where
+the model trained on prior days must predict on a fresh wave of
+arrivals.
+
+```powershell
+.venv\Scripts\python.exe src\eval_temporal.py    # runs Task 1 + Task 2
+```
+
+Artifacts (Task 1): `derived/task1_temporal_summary.csv`
++ `task1_temporal_predictions.csv` + section 1 of
+`temporal_holdout_report.md`.
+
+| Model | log-loss | accuracy | macro AUC |
+|-------|---------:|---------:|----------:|
+| logreg | 1.62 | 0.36 | 0.61 |
+| **rforest** | **1.21** | **0.41** | **0.69** |
+| hgb | 2.02 | 0.42 | 0.62 |
+
+Holdout AUC ≈ CV AUC — the Task-1 ceiling is data-bound (triage
+features simply don't contain Triton/Coral signal). See
+`research/03_v6_feature_evaluation.md`.
+
 ---
 
 ## 8. Train + evaluate Task 2 (4h deterioration)
+
+Cohort: drug-positive per ground truth (`ground_truth_drug != 0`),
+157 of 261 patients. Two variants per run:
+- **WITH** drug-class probs as features (requires §5b)
+- **WITHOUT** (clinical features only — runs unconditionally)
+
+### 8a. 5-fold stratified cross-validation
 
 ```powershell
 .venv\Scripts\python.exe src\task2_deterioration\train_baseline.py
 ```
 
-5-fold stratified CV. Two variants:
-- **WITH** drug-class probs as features (requires §5b)
-- **WITHOUT** (clinical features only — runs unconditionally)
-
-Cohort: drug-positive per ground truth (`ground_truth_drug != 0`).
-157 of 261 patients.
-
 Artifacts (WITH-probs variant overrides):
-- `derived/task2_baseline_summary.csv`
-- `derived/task2_oof_predictions.csv`
+`derived/task2_baseline_summary.csv` + `task2_oof_predictions.csv`.
 
-Current numbers (clinical-only variant, v6 features):
+Clinical-only variant:
 
 | Model | log-loss | accuracy | macro AUC | AUC disp / floor / ICU |
 |-------|---------:|---------:|----------:|-----------------------:|
 | logreg | 0.41 | 0.91 | 0.89 | 0.90 / 0.91 / 0.86 |
 | **rforest** | **0.34** | **0.91** | **0.93** | 0.93 / 0.94 / 0.91 |
 | hgb | 0.64 | 0.82 | 0.87 | 0.90 / 0.85 / 0.87 |
+
+### 8b. Temporal holdout — **deployment-relevant**
+
+Last day of festival (peak day) used as test; prior days = train.
+With the 5-day release this is **112 train / 45 test** for the
+drug-positive cohort.
+
+```powershell
+.venv\Scripts\python.exe src\eval_temporal.py    # Task 1 + Task 2 in one run
+```
+
+Artifacts (Task 2): `derived/task2_temporal_summary.csv` +
+`task2_temporal_predictions.csv` + section 2 of
+`temporal_holdout_report.md`.
+
+| Model | log-loss | accuracy | macro AUC | AUC disp / floor / ICU |
+|-------|---------:|---------:|----------:|-----------------------:|
+| logreg | 0.32 | 0.89 | **0.96** | 0.97 / 0.98 / 0.92 |
+| **rforest** | **0.32** | **0.89** | **0.98** | **0.99 / 0.95 / 1.00** |
+| hgb | 0.59 | 0.87 | 0.87 | 0.92 / 0.80 / 0.88 |
+
+Task 2 holdout AUC of **0.982** is the headline number. The
+severity-anchored features (peak_lactate, peak_CPK, peak_troponin,
+peak_HR, peak_temp) transfer cleanly from training days to the
+peak festival day; no degradation from CV. Per-class AUC for ICU
+hits 1.00 on the holdout — the model recovers every ICU case.
 
 ---
 
@@ -261,39 +314,7 @@ inputs pushed which direction. Prints to a 1-page paper card.
 
 ---
 
-## 10. Temporal holdout — train on early days, test on last day
-
-Mirrors a Phase-2 deployment scenario where the model trained on
-prior days must predict on a fresh wave of arrivals.
-
-```powershell
-.venv\Scripts\python.exe src\eval_temporal.py
-```
-
-Split: train on `encounter_arrival_date < last_day`; test on the
-last day only. With the 5-day release: **187 train / 74 test** for
-Task 1; **112 train / 45 test** for Task 2 (drug-positive cohort).
-
-Artifacts:
-- `derived/task1_temporal_summary.csv` + `task1_temporal_predictions.csv`
-- `derived/task2_temporal_summary.csv` + `task2_temporal_predictions.csv`
-- `derived/temporal_holdout_report.md`
-
-Current holdout numbers:
-
-| Task | Model | Accuracy | Macro AUC |
-|---|---|---:|---:|
-| 1 | rforest | 0.41 | 0.69 |
-| 2 | **rforest** | **0.89** | **0.98** |
-| 2 | logreg | 0.89 | 0.96 |
-
-Task 2 generalizes spectacularly to the holdout day — severity
-anchors lock in. Task 1 is on par with CV (triage data fundamentally
-caps at ~0.70 AUC; see `research/03_v6_feature_evaluation.md`).
-
----
-
-## 11. Unsupervised clustering — task-aligned cohorts
+## 10. Unsupervised clustering — task-aligned cohorts
 
 ```powershell
 .venv\Scripts\python.exe src\unsupervised\cluster.py
@@ -336,7 +357,7 @@ purity. Currently:
 
 ---
 
-## 12. Full one-shot Phase-2 retrain
+## 11. Full one-shot Phase-2 retrain
 
 When fresh xlsx arrives the day-of:
 
