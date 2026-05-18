@@ -27,9 +27,9 @@ from sklearn.ensemble import HistGradientBoostingClassifier, RandomForestClassif
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.impute import SimpleImputer
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import (brier_score_loss, classification_report,
-                              confusion_matrix, log_loss,
-                              roc_auc_score)
+from sklearn.metrics import (average_precision_score, brier_score_loss,
+                              classification_report, confusion_matrix,
+                              log_loss, roc_auc_score)
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 
@@ -157,6 +157,10 @@ def run_task1() -> dict:
     X_tr = np.asarray(pre.transform(X_tr_df), dtype=float)
     X_te = np.asarray(pre.transform(X_te_df), dtype=float)
 
+    # Test-set prevalence per class (climatology baseline for BSS,
+    # and the no-skill baseline for PR-AUC).
+    prev = {DRUG_CLASSES[k]: float((y_te == k).mean()) for k in classes}
+
     rows = []
     pred_rows = []
     for name, mdl in model_zoo_task1().items():
@@ -174,24 +178,64 @@ def run_task1() -> dict:
             auc = float("nan")
         ll = log_loss(y_te, p_full, labels=classes)
         acc = float((pred == y_te).mean())
-        brier = {DRUG_CLASSES[k]:
-                  float(brier_score_loss((y_te == k).astype(int),
-                                          p_full[:, k]))
-                  for k in classes}
+
+        # Per-class OVR metrics
+        per_auc = {}
+        per_prauc = {}
+        per_brier = {}
+        per_bss = {}
+        for k in classes:
+            c = DRUG_CLASSES[k]
+            y_bin = (y_te == k).astype(int)
+            try:
+                per_auc[c] = float(roc_auc_score(y_bin, p_full[:, k]))
+            except ValueError:
+                per_auc[c] = float("nan")
+            try:
+                per_prauc[c] = float(
+                    average_precision_score(y_bin, p_full[:, k]))
+            except ValueError:
+                per_prauc[c] = float("nan")
+            per_brier[c] = float(brier_score_loss(y_bin, p_full[:, k]))
+            # Brier Skill Score: 1 - brier_model / brier_climatology,
+            # where climatology = always predict prevalence.
+            #   brier_climatology = prev * (1 - prev)
+            denom = prev[c] * (1 - prev[c])
+            per_bss[c] = (1.0 - per_brier[c] / denom) if denom > 0 else float("nan")
+        macro_prauc = float(np.nanmean(list(per_prauc.values())))
 
         print(f"\n--- {name} ---")
-        print(f"  log-loss        {ll:.4f}")
-        print(f"  accuracy        {acc:.4f}")
-        print(f"  macro AUC       {auc:.4f}")
-        print(f"  Brier           "
-              f"n={brier['None']:.3f}  k={brier['Kraken Candy']:.3f}  "
-              f"t={brier['Triton Tabs']:.3f}  c={brier['Coral Dust']:.3f}")
+        print(f"  log-loss          {ll:.4f}")
+        print(f"  accuracy          {acc:.4f}")
+        print(f"  macro ROC-AUC     {auc:.4f}")
+        print(f"  OVR ROC-AUC       "
+              f"n={per_auc['None']:.3f}  k={per_auc['Kraken Candy']:.3f}  "
+              f"t={per_auc['Triton Tabs']:.3f}  c={per_auc['Coral Dust']:.3f}")
+        print(f"  macro PR-AUC      {macro_prauc:.4f}")
+        print(f"  OVR PR-AUC        "
+              f"n={per_prauc['None']:.3f}  k={per_prauc['Kraken Candy']:.3f}  "
+              f"t={per_prauc['Triton Tabs']:.3f}  c={per_prauc['Coral Dust']:.3f}")
+        print(f"  prevalence        "
+              f"n={prev['None']:.3f}  k={prev['Kraken Candy']:.3f}  "
+              f"t={prev['Triton Tabs']:.3f}  c={prev['Coral Dust']:.3f}")
+        print(f"  Brier             "
+              f"n={per_brier['None']:.3f}  k={per_brier['Kraken Candy']:.3f}  "
+              f"t={per_brier['Triton Tabs']:.3f}  c={per_brier['Coral Dust']:.3f}")
+        print(f"  Brier Skill Score "
+              f"n={per_bss['None']:+.3f}  k={per_bss['Kraken Candy']:+.3f}  "
+              f"t={per_bss['Triton Tabs']:+.3f}  c={per_bss['Coral Dust']:+.3f}")
 
-        rows.append({
-            "model": name, "logloss": ll, "accuracy": acc,
-            "macro_auc": auc,
-            **{f"brier_{k.lower().split()[0]}": brier[k] for k in DRUG_CLASSES},
-        })
+        row = {"model": name, "logloss": ll, "accuracy": acc,
+                "macro_auc": auc, "macro_prauc": macro_prauc}
+        for k in classes:
+            c = DRUG_CLASSES[k]
+            short = c.lower().split()[0]
+            row[f"prevalence_{short}"] = prev[c]
+            row[f"auc_{short}"] = per_auc[c]
+            row[f"prauc_{short}"] = per_prauc[c]
+            row[f"brier_{short}"] = per_brier[c]
+            row[f"bss_{short}"] = per_bss[c]
+        rows.append(row)
         for i, eid in enumerate(df.loc[is_test, "encounter_id"].values):
             pred_rows.append({
                 "model": name, "encounter_id": eid,
@@ -272,6 +316,9 @@ def run_task2() -> dict:
     X_tr = np.asarray(pre.transform(X_tr_df), dtype=float)
     X_te = np.asarray(pre.transform(X_te_df), dtype=float)
 
+    # Test-set prevalence per class
+    prev = {DISPO_CLASSES[k]: float((y_te == k).mean()) for k in classes}
+
     rows = []
     pred_rows = []
     for name, mdl in model_zoo_task2().items():
@@ -289,34 +336,63 @@ def run_task2() -> dict:
             auc = float("nan")
         ll = log_loss(y_te, p_full, labels=classes)
         acc = float((pred == y_te).mean())
-        per_class_auc = {}
+
+        per_auc = {}
+        per_prauc = {}
+        per_brier = {}
+        per_bss = {}
         for k, c in enumerate(DISPO_CLASSES):
+            y_bin = (y_te == k).astype(int)
             try:
-                per_class_auc[c] = float(
-                    roc_auc_score((y_te == k).astype(int), p_full[:, k]))
+                per_auc[c] = float(roc_auc_score(y_bin, p_full[:, k]))
             except ValueError:
-                per_class_auc[c] = float("nan")
-        per_class_brier = {DISPO_CLASSES[k]:
-                            float(brier_score_loss((y_te == k).astype(int),
-                                                    p_full[:, k]))
-                            for k in classes}
+                per_auc[c] = float("nan")
+            try:
+                per_prauc[c] = float(
+                    average_precision_score(y_bin, p_full[:, k]))
+            except ValueError:
+                per_prauc[c] = float("nan")
+            per_brier[c] = float(brier_score_loss(y_bin, p_full[:, k]))
+            denom = prev[c] * (1 - prev[c])
+            per_bss[c] = (1.0 - per_brier[c] / denom) if denom > 0 else float("nan")
+        macro_prauc = float(np.nanmean(list(per_prauc.values())))
 
         print(f"\n--- {name} ---")
-        print(f"  log-loss        {ll:.4f}")
-        print(f"  accuracy        {acc:.4f}")
-        print(f"  macro AUC       {auc:.4f}")
-        print(f"  per-class AUC   "
-              f"D={per_class_auc['Discharge']:.3f}  "
-              f"F={per_class_auc['Floor']:.3f}  "
-              f"ICU={per_class_auc['ICU']:.3f}")
+        print(f"  log-loss          {ll:.4f}")
+        print(f"  accuracy          {acc:.4f}")
+        print(f"  macro ROC-AUC     {auc:.4f}")
+        print(f"  OVR ROC-AUC       "
+              f"D={per_auc['Discharge']:.3f}  "
+              f"F={per_auc['Floor']:.3f}  "
+              f"ICU={per_auc['ICU']:.3f}")
+        print(f"  macro PR-AUC      {macro_prauc:.4f}")
+        print(f"  OVR PR-AUC        "
+              f"D={per_prauc['Discharge']:.3f}  "
+              f"F={per_prauc['Floor']:.3f}  "
+              f"ICU={per_prauc['ICU']:.3f}")
+        print(f"  prevalence        "
+              f"D={prev['Discharge']:.3f}  "
+              f"F={prev['Floor']:.3f}  "
+              f"ICU={prev['ICU']:.3f}")
+        print(f"  Brier             "
+              f"D={per_brier['Discharge']:.3f}  "
+              f"F={per_brier['Floor']:.3f}  "
+              f"ICU={per_brier['ICU']:.3f}")
+        print(f"  Brier Skill Score "
+              f"D={per_bss['Discharge']:+.3f}  "
+              f"F={per_bss['Floor']:+.3f}  "
+              f"ICU={per_bss['ICU']:+.3f}")
 
-        rows.append({
-            "model": name, "logloss": ll, "accuracy": acc,
-            "macro_auc": auc,
-            **{f"auc_{c.lower()}": per_class_auc[c] for c in DISPO_CLASSES},
-            **{f"brier_{c.lower()}": per_class_brier[c]
-               for c in DISPO_CLASSES},
-        })
+        row = {"model": name, "logloss": ll, "accuracy": acc,
+                "macro_auc": auc, "macro_prauc": macro_prauc}
+        for c in DISPO_CLASSES:
+            short = c.lower()
+            row[f"prevalence_{short}"] = prev[c]
+            row[f"auc_{short}"] = per_auc[c]
+            row[f"prauc_{short}"] = per_prauc[c]
+            row[f"brier_{short}"] = per_brier[c]
+            row[f"bss_{short}"] = per_bss[c]
+        rows.append(row)
         for i, eid in enumerate(df.loc[is_test, "encounter_id"].values):
             pred_rows.append({
                 "model": name, "encounter_id": eid,

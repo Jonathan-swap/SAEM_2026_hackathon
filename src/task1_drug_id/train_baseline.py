@@ -29,7 +29,8 @@ from sklearn.ensemble import HistGradientBoostingClassifier, RandomForestClassif
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.impute import SimpleImputer
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import (brier_score_loss, log_loss, roc_auc_score)
+from sklearn.metrics import (average_precision_score, brier_score_loss,
+                              log_loss, roc_auc_score)
 from sklearn.model_selection import StratifiedKFold
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
@@ -118,7 +119,12 @@ def evaluate(model_name: str, X: pd.DataFrame,
     fold_logloss = []
     fold_acc = []
     fold_auc_macro = []
+    fold_auc_per_class = {c: [] for c in CLASSES}
+    fold_prauc_macro = []
+    fold_prauc = {c: [] for c in CLASSES}
     fold_brier = {c: [] for c in CLASSES}
+    fold_bss = {c: [] for c in CLASSES}
+    fold_prev = {c: [] for c in CLASSES}
 
     oof_proba = np.zeros((len(X), len(CLASSES)))
     oof_pred = np.zeros(len(X), dtype=int)
@@ -160,8 +166,27 @@ def evaluate(model_name: str, X: pd.DataFrame,
             fold_auc_macro.append(float("nan"))
 
         for k, c in enumerate(CLASSES):
-            fold_brier[c].append(
-                brier_score_loss((y[te] == k).astype(int), p_pred[:, k]))
+            y_bin = (y[te] == k).astype(int)
+            prev = float(y_bin.mean())
+            fold_prev[c].append(prev)
+            brier_val = float(brier_score_loss(y_bin, p_pred[:, k]))
+            fold_brier[c].append(brier_val)
+            denom = prev * (1 - prev)
+            fold_bss[c].append((1.0 - brier_val / denom)
+                                 if denom > 0 else float("nan"))
+            try:
+                fold_auc_per_class[c].append(
+                    roc_auc_score(y_bin, p_pred[:, k]))
+            except ValueError:
+                fold_auc_per_class[c].append(float("nan"))
+            try:
+                fold_prauc[c].append(
+                    average_precision_score(y_bin, p_pred[:, k]))
+            except ValueError:
+                fold_prauc[c].append(float("nan"))
+        # macro PR-AUC = mean of per-class AP across the 4 classes
+        fold_prauc_macro.append(
+            float(np.nanmean([fold_prauc[c][-1] for c in CLASSES])))
 
     return {
         "model": model_name,
@@ -171,10 +196,28 @@ def evaluate(model_name: str, X: pd.DataFrame,
         "acc_std": float(np.std(fold_acc)),
         "auc_macro_mean": float(np.nanmean(fold_auc_macro)),
         "auc_macro_std": float(np.nanstd(fold_auc_macro)),
+        "auc_none": float(np.nanmean(fold_auc_per_class["None"])),
+        "auc_kraken": float(np.nanmean(fold_auc_per_class["Kraken Candy"])),
+        "auc_triton": float(np.nanmean(fold_auc_per_class["Triton Tabs"])),
+        "auc_coral": float(np.nanmean(fold_auc_per_class["Coral Dust"])),
+        "prauc_macro_mean": float(np.nanmean(fold_prauc_macro)),
+        "prauc_macro_std": float(np.nanstd(fold_prauc_macro)),
+        "prauc_none": float(np.nanmean(fold_prauc["None"])),
+        "prauc_kraken": float(np.nanmean(fold_prauc["Kraken Candy"])),
+        "prauc_triton": float(np.nanmean(fold_prauc["Triton Tabs"])),
+        "prauc_coral": float(np.nanmean(fold_prauc["Coral Dust"])),
         "brier_none": float(np.mean(fold_brier["None"])),
         "brier_kraken": float(np.mean(fold_brier["Kraken Candy"])),
         "brier_triton": float(np.mean(fold_brier["Triton Tabs"])),
         "brier_coral": float(np.mean(fold_brier["Coral Dust"])),
+        "bss_none": float(np.nanmean(fold_bss["None"])),
+        "bss_kraken": float(np.nanmean(fold_bss["Kraken Candy"])),
+        "bss_triton": float(np.nanmean(fold_bss["Triton Tabs"])),
+        "bss_coral": float(np.nanmean(fold_bss["Coral Dust"])),
+        "prevalence_none": float(np.mean(fold_prev["None"])),
+        "prevalence_kraken": float(np.mean(fold_prev["Kraken Candy"])),
+        "prevalence_triton": float(np.mean(fold_prev["Triton Tabs"])),
+        "prevalence_coral": float(np.mean(fold_prev["Coral Dust"])),
         "oof_proba": oof_proba,
         "oof_pred": oof_pred,
     }
@@ -213,11 +256,25 @@ def main() -> None:
               f"(+/- {r['logloss_std']:.4f})")
         print(f"  accuracy:        {r['acc_mean']:.4f} "
               f"(+/- {r['acc_std']:.4f})")
-        print(f"  macro AUC:       {r['auc_macro_mean']:.4f} "
+        print(f"  macro ROC-AUC:   {r['auc_macro_mean']:.4f} "
               f"(+/- {r['auc_macro_std']:.4f})")
+        print(f"  OVR ROC-AUC:     "
+              f"n={r['auc_none']:.3f}  k={r['auc_kraken']:.3f}  "
+              f"t={r['auc_triton']:.3f}  c={r['auc_coral']:.3f}")
+        print(f"  macro PR-AUC:    {r['prauc_macro_mean']:.4f} "
+              f"(+/- {r['prauc_macro_std']:.4f})")
+        print(f"  OVR PR-AUC:      "
+              f"n={r['prauc_none']:.3f}  k={r['prauc_kraken']:.3f}  "
+              f"t={r['prauc_triton']:.3f}  c={r['prauc_coral']:.3f}")
+        print(f"  prevalence:      "
+              f"n={r['prevalence_none']:.3f}  k={r['prevalence_kraken']:.3f}  "
+              f"t={r['prevalence_triton']:.3f}  c={r['prevalence_coral']:.3f}")
         print(f"  Brier per class: "
               f"n={r['brier_none']:.3f}  k={r['brier_kraken']:.3f}  "
               f"t={r['brier_triton']:.3f}  c={r['brier_coral']:.3f}")
+        print(f"  Brier Skill Sc:  "
+              f"n={r['bss_none']:+.3f}  k={r['bss_kraken']:+.3f}  "
+              f"t={r['bss_triton']:+.3f}  c={r['bss_coral']:+.3f}")
 
     print("\n" + "=" * 78)
     print("SUMMARY (5-fold stratified CV, ground-truth labels)")

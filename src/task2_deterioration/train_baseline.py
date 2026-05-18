@@ -32,8 +32,9 @@ from sklearn.ensemble import HistGradientBoostingClassifier, RandomForestClassif
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.impute import SimpleImputer
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import (brier_score_loss, classification_report,
-                              confusion_matrix, log_loss, roc_auc_score)
+from sklearn.metrics import (average_precision_score, brier_score_loss,
+                              classification_report, confusion_matrix,
+                              log_loss, roc_auc_score)
 from sklearn.model_selection import StratifiedKFold
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
@@ -138,8 +139,12 @@ def evaluate(model_name: str, X: pd.DataFrame,
     fold_logloss = []
     fold_acc = []
     fold_auc_macro = []
+    fold_prauc_macro = []
     fold_auc_per_class = {c: [] for c in CLASSES}
+    fold_prauc_per_class = {c: [] for c in CLASSES}
     fold_brier = {c: [] for c in CLASSES}
+    fold_bss = {c: [] for c in CLASSES}
+    fold_prev = {c: [] for c in CLASSES}
 
     oof_proba = np.zeros((len(X), len(CLASSES)))
     oof_pred = np.zeros(len(X), dtype=int)
@@ -176,13 +181,28 @@ def evaluate(model_name: str, X: pd.DataFrame,
             fold_auc_macro.append(float("nan"))
 
         for k, c in enumerate(CLASSES):
+            y_bin = (y[te] == k).astype(int)
+            prev = float(y_bin.mean())
+            fold_prev[c].append(prev)
             try:
                 fold_auc_per_class[c].append(
-                    roc_auc_score((y[te] == k).astype(int), p[:, k]))
+                    roc_auc_score(y_bin, p[:, k]))
             except ValueError:
                 fold_auc_per_class[c].append(float("nan"))
-            fold_brier[c].append(
-                brier_score_loss((y[te] == k).astype(int), p[:, k]))
+            try:
+                fold_prauc_per_class[c].append(
+                    average_precision_score(y_bin, p[:, k]))
+            except ValueError:
+                fold_prauc_per_class[c].append(float("nan"))
+            brier_val = float(brier_score_loss(y_bin, p[:, k]))
+            fold_brier[c].append(brier_val)
+            denom = prev * (1 - prev)
+            fold_bss[c].append((1.0 - brier_val / denom)
+                                 if denom > 0 else float("nan"))
+        # macro PR-AUC = mean of one-vs-rest AP across classes
+        fold_prauc_macro.append(
+            float(np.nanmean([fold_prauc_per_class[c][-1]
+                               for c in CLASSES])))
 
     return {
         "model": model_name,
@@ -192,12 +212,23 @@ def evaluate(model_name: str, X: pd.DataFrame,
         "acc_std": float(np.std(fold_acc)),
         "auc_macro_mean": float(np.nanmean(fold_auc_macro)),
         "auc_macro_std": float(np.nanstd(fold_auc_macro)),
+        "prauc_macro_mean": float(np.nanmean(fold_prauc_macro)),
+        "prauc_macro_std": float(np.nanstd(fold_prauc_macro)),
         "auc_discharge": float(np.nanmean(fold_auc_per_class["Discharge"])),
         "auc_floor": float(np.nanmean(fold_auc_per_class["Floor"])),
         "auc_icu": float(np.nanmean(fold_auc_per_class["ICU"])),
+        "prauc_discharge": float(np.nanmean(fold_prauc_per_class["Discharge"])),
+        "prauc_floor": float(np.nanmean(fold_prauc_per_class["Floor"])),
+        "prauc_icu": float(np.nanmean(fold_prauc_per_class["ICU"])),
         "brier_discharge": float(np.mean(fold_brier["Discharge"])),
         "brier_floor": float(np.mean(fold_brier["Floor"])),
         "brier_icu": float(np.mean(fold_brier["ICU"])),
+        "bss_discharge": float(np.nanmean(fold_bss["Discharge"])),
+        "bss_floor": float(np.nanmean(fold_bss["Floor"])),
+        "bss_icu": float(np.nanmean(fold_bss["ICU"])),
+        "prevalence_discharge": float(np.mean(fold_prev["Discharge"])),
+        "prevalence_floor": float(np.mean(fold_prev["Floor"])),
+        "prevalence_icu": float(np.mean(fold_prev["ICU"])),
         "oof_proba": oof_proba,
         "oof_pred": oof_pred,
     }
@@ -240,18 +271,30 @@ def main() -> None:
             oof_store[name] = {"proba": r.pop("oof_proba"),
                                 "pred": r.pop("oof_pred")}
             results.append(r)
-            print(f"  log-loss:        {r['logloss_mean']:.4f} "
+            print(f"  log-loss:           {r['logloss_mean']:.4f} "
                   f"(+/- {r['logloss_std']:.4f})")
-            print(f"  accuracy:        {r['acc_mean']:.4f} "
+            print(f"  accuracy:           {r['acc_mean']:.4f} "
                   f"(+/- {r['acc_std']:.4f})")
-            print(f"  macro AUC:       {r['auc_macro_mean']:.4f} "
+            print(f"  macro ROC-AUC:      {r['auc_macro_mean']:.4f} "
                   f"(+/- {r['auc_macro_std']:.4f})")
-            print(f"  per-class AUC:   "
+            print(f"  OVR ROC-AUC:        "
                   f"D={r['auc_discharge']:.3f}  F={r['auc_floor']:.3f}  "
                   f"ICU={r['auc_icu']:.3f}")
-            print(f"  per-class Brier: "
+            print(f"  macro PR-AUC:       {r['prauc_macro_mean']:.4f} "
+                  f"(+/- {r['prauc_macro_std']:.4f})")
+            print(f"  OVR PR-AUC:         "
+                  f"D={r['prauc_discharge']:.3f}  F={r['prauc_floor']:.3f}  "
+                  f"ICU={r['prauc_icu']:.3f}")
+            print(f"  prevalence:         "
+                  f"D={r['prevalence_discharge']:.3f}  "
+                  f"F={r['prevalence_floor']:.3f}  "
+                  f"ICU={r['prevalence_icu']:.3f}")
+            print(f"  per-class Brier:    "
                   f"D={r['brier_discharge']:.3f}  F={r['brier_floor']:.3f}  "
                   f"ICU={r['brier_icu']:.3f}")
+            print(f"  Brier Skill Score:  "
+                  f"D={r['bss_discharge']:+.3f}  F={r['bss_floor']:+.3f}  "
+                  f"ICU={r['bss_icu']:+.3f}")
 
         print(f"\n--- SUMMARY ({variant_name}) ---")
         summary = pd.DataFrame(results).set_index("model")
