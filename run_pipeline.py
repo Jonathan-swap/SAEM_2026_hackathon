@@ -20,16 +20,18 @@ Order:
   2. extract_structured        (xlsx -> features_*.csv, outcomes left out)
   3. extract_time_features     (Groups A-G time features)
   4. extract_differentials     (triage<->4h paired deltas)
-  5. extract_note_features     (onset minutes + location)
-  6. extract_v6_features       (PE binaries + peak-lab thresholds +
+  5. extract_note_features     (onset minutes + location, triage notes)
+  6. extract_note_4h_features  (HPI/MDM word counts + severity tier,
+                                4h-only — never lands in features_triage)
+  7. extract_v6_features       (PE binaries + peak-lab thresholds +
                                 triage keywords from toxidrome v6)
-  7. load_ground_truth         (drug labels -> derived/ground_truth.csv)
-  8. build_outcomes            (drug + disposition merged -> outcomes.csv)
-  9. [optional] 10 LLM agents  (spawn via harness — manual step)
- 10. merge_probabilities       (consensus across agents)
- 11. cleanup_features          (drop constants, merge candidates)
- 12. train Task 1              (drug ID at triage)
- 13. train Task 2              (deterioration at 4h)
+  8. load_ground_truth         (drug labels -> derived/ground_truth.csv)
+  9. build_outcomes            (drug + disposition merged -> outcomes.csv)
+ 10. [optional] 10 LLM agents  (spawn via harness — manual step)
+ 11. merge_probabilities       (consensus across agents)
+ 12. cleanup_features          (drop constants, merge candidates)
+ 13. train Task 1              (drug ID at triage)
+ 14. train Task 2              (deterioration at 4h)
 """
 from __future__ import annotations
 
@@ -48,6 +50,7 @@ STEPS = [
     ("extract_time_features","src/features/extract_time_features.py"),
     ("extract_differentials","src/features/extract_differentials.py"),
     ("extract_note_features","src/features/extract_note_features.py"),
+    ("extract_note_4h_features","src/features/extract_note_4h_features.py"),
     ("extract_v6_features",  "src/features/extract_v6_features.py"),
     ("load_ground_truth",    "src/labels/load_ground_truth.py"),
     ("build_outcomes",       "src/labels/build_outcomes.py"),

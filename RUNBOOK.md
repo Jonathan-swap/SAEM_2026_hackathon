@@ -111,10 +111,11 @@ Steps executed (in order):
 | 2 | `src/features/extract_structured.py`    | `derived/features_triage.csv` + `features_fourh.csv` (outcomes excluded) |
 | 3 | `src/features/extract_time_features.py` | adds Groups A–G time features (capped at min ≤ 240) |
 | 4 | `src/features/extract_differentials.py` | adds triage↔4h diffs to `features_fourh.csv` |
-| 5 | `src/features/extract_note_features.py` | adds parsed onset minutes + festival flags |
-| 6 | `src/features/extract_v6_features.py`   | adds PE binaries + peak-lab thresholds + triage keywords (see §4.1 for details) |
-| 7 | `src/labels/load_ground_truth.py`       | `derived/ground_truth.csv` (drug class) |
-| 8 | `src/labels/build_outcomes.py`          | `derived/outcomes.csv` (drug class + disposition) |
+| 5 | `src/features/extract_note_features.py` | adds parsed onset minutes + festival flags (triage notes) |
+| 6 | `src/features/extract_note_4h_features.py` | adds HPI/MDM word counts + `mdm_severity_tier_4h` + `hpi_has_severe_4h` (4h-only; never lands in `features_triage.csv`) |
+| 7 | `src/features/extract_v6_features.py`   | adds PE binaries + peak-lab thresholds + triage keywords (see §4.1 for details) |
+| 8 | `src/labels/load_ground_truth.py`       | `derived/ground_truth.csv` (drug class) |
+| 9 | `src/labels/build_outcomes.py`          | `derived/outcomes.csv` (drug class + disposition) |
 
 Pass criterion: each step logs `OK` and the time-features script ends
 with `OK: no leakage; triage features contain only arrival-time +

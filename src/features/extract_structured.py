@@ -203,6 +203,30 @@ def main() -> None:
         axis=1,
     )
 
+    # `additional_labs_drawn_4h` — binary clinician-escalation signal:
+    # 1 if any of {lactate, cpk, vbg_ph, troponin}_4h has a value on the
+    # 4-hour reassessment row, else 0. Mirrors task2_disposition/scripts/
+    # disposition_prediction.py's `additional_labs_drawn`. 4h-only: the
+    # _4h suffix triggers the leakage sentinel below so it cannot land
+    # in features_triage.csv.
+    extra_lab_cols = [
+        c for c in fourh.columns
+        if c.endswith("_4h") and any(
+            lab in c.rsplit(".", 1)[-1]
+            for lab in ("lactate", "cpk", "vbg_ph", "troponin")
+        )
+    ]
+    if extra_lab_cols:
+        fourh_full["additional_labs_drawn_4h"] = (
+            fourh[extra_lab_cols].notna().any(axis=1).astype(int).values
+        )
+        print(f"additional_labs_drawn_4h: built from {len(extra_lab_cols)} "
+              f"4h lab cols {extra_lab_cols}")
+    else:
+        print("WARN: no 4h extra-lab cols found "
+              "(lactate/cpk/vbg_ph/troponin); "
+              "additional_labs_drawn_4h NOT created")
+
     features_fourh = (
         triage_block
         .merge(fourh_full, on="encounter_id", how="left")
