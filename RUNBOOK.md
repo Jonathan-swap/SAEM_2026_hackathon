@@ -293,7 +293,7 @@ None 0.40 / Kraken 0.22 / Triton 0.20 / Coral 0.18.
 |---|---:|---:|---:|---:|---:|
 | None | 0.40 | 0.732 | 0.616 | 0.213 | **+0.113** |
 | Kraken | 0.22 | 0.603 | 0.339 | 0.173 | −0.005 |
-| Triton | 0.20 | 0.743 | 0.457 | 0.144 | **+0.085** |
+| Triton | 0.20 | 0.743 | 0.457 | 0.143 | **+0.085** |
 | Coral | 0.18 | 0.703 | 0.411 | 0.143 | **+0.053** |
 
 Task-1 BSS is near zero or slightly negative for the drug classes
@@ -321,17 +321,17 @@ Artifacts (Task 1): `derived/task1_temporal_summary.csv`
 | Model | log-loss | accuracy | macro ROC-AUC | macro PR-AUC |
 |-------|---------:|---------:|--------------:|-------------:|
 | logreg | 2.16 | 0.35 | 0.600 | 0.358 |
-| **rforest** | **1.22** | **0.42** | **0.691** | **0.413** |
-| hgb | 1.70 | 0.43 | 0.685 | 0.418 |
+| **rforest** | **1.21** | **0.39** | **0.696** | **0.429** |
+| hgb | 1.70 | 0.43 | 0.685 | 0.419 |
 
 **Per-class metrics for rforest (holdout):**
 
 | Class | Prevalence | ROC-AUC | PR-AUC | Brier | BSS |
 |---|---:|---:|---:|---:|---:|
-| None | 0.39 | 0.704 | 0.639 | 0.211 | **+0.114** |
-| Kraken | 0.32 | 0.629 | 0.474 | 0.218 | +0.006 |
-| Triton | 0.16 | 0.739 | 0.320 | 0.128 | **+0.057** |
-| Coral | 0.12 | 0.691 | 0.221 | 0.112 | −0.046 |
+| None | 0.39 | 0.721 | 0.646 | 0.206 | **+0.134** |
+| Kraken | 0.32 | 0.631 | 0.450 | 0.219 | +0.000 |
+| Triton | 0.16 | 0.753 | 0.335 | 0.127 | **+0.068** |
+| Coral | 0.12 | 0.679 | 0.283 | 0.112 | −0.053 |
 
 Holdout AUC ≈ CV AUC — the Task-1 ceiling is data-bound. See
 `research/03_v6_feature_evaluation.md`.
@@ -378,13 +378,13 @@ for the all-patients cohort.
 Artifacts (WITH-probs variant overrides):
 `derived/task2_baseline_summary.csv` + `task2_oof_predictions.csv`.
 
-Clinical-only variant:
+**WITH drug-probs variant** (default-saved, drug-positive cohort n=157):
 
 | Model | log-loss | accuracy | macro ROC-AUC | macro PR-AUC |
 |-------|---------:|---------:|--------------:|-------------:|
 | logreg | 0.41 | 0.91 | 0.888 | 0.830 |
-| **rforest** | **0.35** | **0.91** | **0.927** | **0.895** |
-| hgb | 0.64 | 0.82 | 0.879 | 0.702 |
+| **rforest** | **0.35** | **0.92** | **0.924** | **0.887** |
+| hgb | 0.64 | 0.83 | 0.877 | 0.692 |
 
 Class prevalence: Discharge 0.77 / Floor 0.14 / ICU 0.09.
 
@@ -392,16 +392,27 @@ Class prevalence: Discharge 0.77 / Floor 0.14 / ICU 0.09.
 
 | Class | Prevalence | ROC-AUC | PR-AUC | Brier | BSS |
 |---|---:|---:|---:|---:|---:|
-| Discharge | 0.77 | 0.933 | 0.966 | 0.066 | **+0.624** |
-| Floor | 0.14 | 0.934 | 0.834 | 0.061 | **+0.483** |
-| ICU | 0.09 | 0.915 | 0.887 | 0.032 | **+0.613** |
+| Discharge | 0.77 | 0.929 | 0.963 | 0.066 | **+0.622** |
+| Floor | 0.14 | 0.934 | 0.834 | 0.060 | **+0.485** |
+| ICU | 0.09 | 0.908 | 0.863 | 0.032 | **+0.613** |
 
-**Macro metrics for all-patients cohort (n=261, rforest)**:
+**All-patients cohort (n=261, with-probs variant)**:
 
-| Variant | macro ROC-AUC | macro PR-AUC |
-|---|---:|---:|
-| WITHOUT drug-probs (clinical-only) | **0.955** | **0.905** |
-| WITH drug-probs | **0.955** | **0.904** |
+| Model | log-loss | accuracy | macro ROC-AUC | macro PR-AUC |
+|-------|---------:|---------:|--------------:|-------------:|
+| logreg | 0.64 | 0.84 | 0.911 | 0.820 |
+| **rforest** | **0.34** | **0.90** | **0.949** | **0.896** |
+| hgb | 0.45 | 0.90 | 0.941 | 0.874 |
+
+Class prevalence on full cohort: Discharge 0.66 / Floor 0.20 / ICU 0.15.
+
+**Per-class metrics for rforest (all patients, n=261):**
+
+| Class | Prevalence | ROC-AUC | PR-AUC | Brier | BSS |
+|---|---:|---:|---:|---:|---:|
+| Discharge | 0.66 | 0.954 | 0.961 | 0.059 | **+0.739** |
+| Floor | 0.20 | 0.948 | 0.843 | 0.067 | **+0.582** |
+| ICU | 0.15 | 0.946 | 0.883 | 0.034 | **+0.723** |
 
 Disposition distribution on the full cohort: Discharge 171 (66%) /
 Floor 52 (20%) / ICU 38 (15%). The all-patients macro AUC is
@@ -430,7 +441,7 @@ Artifacts (Task 2): `derived/task2_temporal_summary.csv` +
 |-------|---------:|---------:|--------------:|-------------:|
 | logreg | 0.32 | 0.89 | 0.957 | 0.884 |
 | **rforest** | **0.32** | **0.89** | **0.985** | **0.952** |
-| hgb | 0.58 | 0.87 | 0.869 | 0.653 |
+| hgb | 0.58 | 0.87 | 0.870 | 0.647 |
 
 Test-set class prevalence: Discharge 0.73 / Floor 0.16 / ICU 0.11.
 
@@ -438,9 +449,9 @@ Test-set class prevalence: Discharge 0.73 / Floor 0.16 / ICU 0.11.
 
 | Class | Prevalence | ROC-AUC | PR-AUC | Brier | BSS |
 |---|---:|---:|---:|---:|---:|
-| Discharge | 0.73 | 0.992 | 0.997 | 0.053 | **+0.730** |
-| Floor | 0.16 | 0.962 | 0.858 | 0.070 | **+0.467** |
-| ICU | 0.11 | **1.000** | **1.000** | 0.038 | **+0.617** |
+| Discharge | 0.73 | 0.992 | 0.997 | 0.054 | **+0.722** |
+| Floor | 0.16 | 0.962 | 0.858 | 0.070 | **+0.464** |
+| ICU | 0.11 | **1.000** | **1.000** | 0.037 | **+0.626** |
 
 Task-2 holdout rforest hits **0.985 macro ROC-AUC and 0.952 macro
 PR-AUC** on the peak festival day. ICU-class ROC-AUC and PR-AUC
