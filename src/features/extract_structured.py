@@ -132,7 +132,11 @@ def aggregate_interventions(s: object) -> dict[str, float]:
 def main() -> None:
     triage = pd.read_excel(XLSX, sheet_name="Triage_Data", engine="openpyxl")
     fourh = pd.read_excel(XLSX, sheet_name="Four_Hour_Data", engine="openpyxl")
-    dispo = pd.read_excel(XLSX, sheet_name="Disposition", engine="openpyxl")
+    # NOTE: the Disposition sheet is NOT merged into features here.
+    # Outcomes live exclusively in derived/outcomes.csv (built by
+    # src/labels/build_outcomes.py). Keeping the target out of the
+    # feature tables makes "X cannot see y" structural rather than
+    # convention-enforced.
 
     # ---- TRIAGE FEATURES (Task 1 inputs — no time leakage) ----
     # Keep all triage columns INCLUDING the brief_note text (written
@@ -153,9 +157,11 @@ def main() -> None:
         note_lc.str.contains(FESTIVAL_KEYWORDS)
     ).astype(int)
 
-    # Disposition is attached for joining, but Task 1 must not use it
-    # as a feature. It IS the Task 2 target.
-    features_triage = triage_block.merge(dispo, on="encounter_id", how="left")
+    # `encounter_disposition_label` is the Task-2 target and is NOT
+    # available at triage. Excluded from features_triage to make the
+    # leakage protection structural (so naive `df.drop(["encounter_id"])`
+    # cannot accidentally feed it into a Task-1 model).
+    features_triage = triage_block
 
     triage_path = OUT / "features_triage.csv"
     features_triage.to_csv(triage_path, index=False)
@@ -200,7 +206,6 @@ def main() -> None:
     features_fourh = (
         triage_block
         .merge(fourh_full, on="encounter_id", how="left")
-        .merge(dispo, on="encounter_id", how="left")
     )
 
     fourh_path = OUT / "features_fourh.csv"
@@ -216,15 +221,19 @@ def main() -> None:
           f"{(features_triage['triage_mode_of_arrival'] == 'Festival Medical Tent Transfer').sum()}")
     print(f"  via note keyword only:    "
           f"{features_triage['festival_note_keyword_hit'].sum()}")
-    print(f"\nDisposition class counts:\n"
-          f"{features_triage['encounter_disposition_label'].value_counts()}")
 
-    # ---- Leakage sentinel ----
+    # ---- Leakage sentinel: BOTH feature tables must be outcome-free ----
     forbidden_in_triage = [
         c for c in features_triage.columns
         if c.startswith(("ed_course", "narrative_notes_", "narrative.notes_"))
         or "_4h" in c or "delta_" in c
+        or c == "encounter_disposition_label"
     ]
+    if "encounter_disposition_label" in features_fourh.columns:
+        print(f"FAIL: encounter_disposition_label leaked into features_fourh.csv.")
+        raise SystemExit(1)
+    print(f"\nOK: encounter_disposition_label NOT in features_fourh.csv "
+          f"(outcomes live only in derived/outcomes.csv).")
     assert not forbidden_in_triage, (
         f"Leakage: forbidden columns leaked into triage features: "
         f"{forbidden_in_triage}"

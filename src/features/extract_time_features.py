@@ -37,6 +37,9 @@ FESTIVAL_START = datetime(2025, 5, 18)
 
 # ---- Parsing ----------------------------------------------------------
 
+FOUR_HOUR_CAP_MIN = 240  # Task-2 horizon — minutes since arrival
+
+
 def safe_parse(s: object) -> list[dict]:
     if not isinstance(s, str) or not s.strip() or s.strip() == "[]":
         return []
@@ -47,10 +50,30 @@ def safe_parse(s: object) -> list[dict]:
         return []
 
 
+def cap_4h(rows: list[dict]) -> list[dict]:
+    """Defensive guard: keep only rows with minute <= 240.
+
+    The source xlsx is already bounded to the 4h window (verified by
+    src/eda/check_time_horizons.py), so this is a no-op on the
+    current dataset. The guard prevents silent leakage if a future
+    data release adds post-4h entries to the timeseries blobs.
+    """
+    out: list[dict] = []
+    for r in rows:
+        m = r.get("minute") if isinstance(r, dict) else None
+        if isinstance(m, (int, float)) and m <= FOUR_HOUR_CAP_MIN:
+            out.append(r)
+    return out
+
+
 # ---- Group A — arrival-time features ----------------------------------
 
-def arrival_features(arrival_date: object,
-                     same_day_volume: int) -> dict[str, float]:
+# Time-leakage note: an earlier version emitted `arrival_same_day_volume`
+# (full-day count of arrivals on the encounter's date). That value is
+# only knowable AFTER the day ends, so it is not available at triage of
+# any individual patient. Removed 2026-05-17.
+
+def arrival_features(arrival_date: object) -> dict[str, float]:
     """Triage-available time context (Task 1 + Task 2)."""
     if not isinstance(arrival_date, (pd.Timestamp, datetime)):
         try:
@@ -66,7 +89,6 @@ def arrival_features(arrival_date: object,
         "arrival_dow": dow,
         "arrival_is_weekend": int(dow in (5, 6)),
         "arrival_is_peak_festival_day": int(delta_days in (1, 2, 3)),
-        "arrival_same_day_volume": same_day_volume,
     }
 
 
@@ -496,16 +518,10 @@ def main() -> None:
     triage = pd.read_excel(XLSX, sheet_name="Triage_Data", engine="openpyxl")
     fourh = pd.read_excel(XLSX, sheet_name="Four_Hour_Data", engine="openpyxl")
 
-    # Same-day arrival volume (used in Group A)
-    sd_volume = (triage.groupby("encounter_arrival_date")["encounter_id"]
-                       .transform("count")).rename("arrival_same_day_volume_raw")
-    triage = pd.concat([triage, sd_volume], axis=1)
-
     # ---- TRIAGE side: Group A only ----
     rows_t: list[dict] = []
     for _, row in triage.iterrows():
-        feats = arrival_features(row["encounter_arrival_date"],
-                                  int(row["arrival_same_day_volume_raw"]))
+        feats = arrival_features(row["encounter_arrival_date"])
         feats["encounter_id"] = row["encounter_id"]
         rows_t.append(feats)
     time_t = pd.DataFrame(rows_t)
@@ -515,18 +531,23 @@ def main() -> None:
 
     # ---- 4-HOUR side: Groups A-G ----
     print("Computing 4-hour time features (Groups A-G) — 261 encounters...")
+    n_dropped = 0
     rows_f: list[dict] = []
     for _, row in fourh.merge(triage[["encounter_id",
-                                       "encounter_arrival_date",
-                                       "arrival_same_day_volume_raw"]],
+                                       "encounter_arrival_date"]],
                               on="encounter_id").iterrows():
-        vitals = safe_parse(row["ed_course.vitals_timeseries"])
-        labs = safe_parse(row["ed_course.labs_timeseries"])
-        intvs = safe_parse(row["ed_course.interventions"])
+        v_raw = safe_parse(row["ed_course.vitals_timeseries"])
+        l_raw = safe_parse(row["ed_course.labs_timeseries"])
+        i_raw = safe_parse(row["ed_course.interventions"])
+        vitals = cap_4h(v_raw)
+        labs = cap_4h(l_raw)
+        intvs = cap_4h(i_raw)
+        n_dropped += ((len(v_raw) - len(vitals))
+                       + (len(l_raw) - len(labs))
+                       + (len(i_raw) - len(intvs)))
 
         feats: dict[str, float | str] = {}
-        feats.update(arrival_features(row["encounter_arrival_date"],
-                                       int(row["arrival_same_day_volume_raw"])))
+        feats.update(arrival_features(row["encounter_arrival_date"]))
         feats.update(vital_trajectory(vitals))
         feats.update(lab_trajectory(labs))
         feats.update(intervention_features(intvs))
@@ -535,6 +556,8 @@ def main() -> None:
         feats.update(arc_features(vitals))
         feats["encounter_id"] = row["encounter_id"]
         rows_f.append(feats)
+    print(f"4h cap: dropped {n_dropped} timeseries records with minute > "
+          f"{FOUR_HOUR_CAP_MIN} across all encounters")
 
     time_f = pd.DataFrame(rows_f)
     # Move encounter_id to first column
@@ -586,9 +609,11 @@ def main() -> None:
     # ---- Leakage sentinel ----
     forbidden_prefixes = ("vts_", "lts_", "itv_", "xmod_",
                           "stab_", "arc_")
+    forbidden_exact = {"arrival_same_day_volume",
+                        "encounter_disposition_label"}
     leaked = [c for c in features_triage.columns
               if c.startswith(forbidden_prefixes) or "_4h" in c
-              or "delta_" in c]
+              or "delta_" in c or c in forbidden_exact]
     assert not leaked, (f"Leakage in triage features: {leaked}")
     print("\nOK: no leakage; triage features contain only arrival-time + "
           "minute-0 signals.")

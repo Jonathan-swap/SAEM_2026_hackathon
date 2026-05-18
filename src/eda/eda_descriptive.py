@@ -511,6 +511,10 @@ def main() -> None:
     fourh = pd.read_csv(DERIVED / "features_fourh.csv")
     probs = pd.read_csv(DERIVED / "probs_avg.csv",
                          keep_default_na=False, na_values=[""])
+    # Outcomes (canonical label source — feature tables no longer
+    # carry encounter_disposition_label).
+    outcomes = pd.read_csv(DERIVED / "outcomes.csv")[
+        ["encounter_id", "encounter_disposition_label"]]
 
     # Labels
     drug_map = {"Kraken Candy": 0, "Triton Tabs": 1, "Coral Dust": 2,
@@ -519,7 +523,9 @@ def main() -> None:
     argmax = probs.set_index("encounter_id")["argmax_class"]
     y_drug = argmax.reindex(triage["encounter_id"]).map(drug_map).to_numpy()
     cohort_ids = probs[probs["argmax_class"] != "None"]["encounter_id"].tolist()
-    cohort = fourh[fourh["encounter_id"].isin(cohort_ids)].reset_index(drop=True)
+    cohort = (fourh[fourh["encounter_id"].isin(cohort_ids)]
+                .merge(outcomes, on="encounter_id", how="left")
+                .reset_index(drop=True))
     y_dispo = cohort["encounter_disposition_label"].map(dispo_map).to_numpy()
 
     rep.append("## Data\n")

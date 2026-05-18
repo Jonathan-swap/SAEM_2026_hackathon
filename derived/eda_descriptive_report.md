@@ -6,8 +6,8 @@ What does the dataset look like, what have we built, and what new features might
 
 ## Data
 
-- features_triage.csv: **(261, 53)**
-- features_fourh.csv:  **(261, 431)**
+- features_triage.csv: **(261, 66)**
+- features_fourh.csv:  **(261, 467)**
 - probs_avg.csv:       **(261, 12)**  (soft Task-1 labels, argmax distribution shown below)
 - Drug-positive cohort (Task 2): **234 patients**
 
@@ -15,8 +15,8 @@ What does the dataset look like, what have we built, and what new features might
 
 - Encounters: **261**
 - Date range: `2025-05-18` to `2025-05-22` (5 unique days)
-- Triage features: **53 cols**
-- 4h features:     **431 cols**
+- Triage features: **66 cols**
+- 4h features:     **467 cols**
 
 ### Numeric vitals + labs (first 25 cols)
 
@@ -71,24 +71,11 @@ What does the dataset look like, what have we built, and what new features might
   - `Other/Multiracial`: 9
   - `Native American`: 6
 
-**triage_chief_complaint** (10 unique)
-  - `Altered mental status`: 43
-  - `Nausea/vomiting`: 35
-  - `Anxiety/panic`: 32
-  - `Palpitations`: 30
-  - `Agitation`: 28
-  - `Chest pain`: 26
-
 **triage_mode_of_arrival** (4 unique)
   - `Walk-in`: 126
   - `EMS`: 88
   - `Festival Medical Tent Transfer`: 32
   - `Police`: 15
-
-**encounter_disposition_label** (3 unique)
-  - `Discharge`: 171
-  - `Floor`: 52
-  - `ICU`: 38
 
 ## B. Engineered-feature family overview
 
@@ -98,8 +85,8 @@ What does the dataset look like, what have we built, and what new features might
 | triage demographics | 3 | 3 | Age, sex, race |
 | triage POC labs | 6 | 6 | iStat panel at triage (glucose, pH, Na, K, Hgb, anion gap) |
 | PMH flags | 5 | 5 | Past medical history (psych/cardiac/pulm/renal/substance) |
-| arrival/context | 8 | 8 | Festival exposure markers + day of festival |
-| note features | 16 | 16 | Onset minutes + festival location parsed from triage_brief_note |
+| arrival/context | 7 | 7 | Festival exposure markers + day of festival |
+| note features | 19 | 19 | Onset minutes + festival location parsed from triage_brief_note |
 | 4h reassessment | 0 | 22 | Vitals + labs + intervention flags at 4h mark |
 | vital time-series agg | 0 | 145 | Slopes / peaks / recovery half-time from minute-level vitals |
 | lab time-series agg | 0 | 133 | Per-analyte trajectory (first/last/n_draws/delta) |

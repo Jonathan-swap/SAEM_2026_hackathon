@@ -1,0 +1,223 @@
+model,encounter_id,true_label,p_drug,pred_label
+logreg,E000143,Drug-positive,0.3496285447644815,No drug
+logreg,E000130,No drug,0.11191892159327317,No drug
+logreg,E000974,No drug,0.09081663684339758,No drug
+logreg,E001372,Drug-positive,0.10480067900775297,No drug
+logreg,E001311,Drug-positive,0.9593996995760286,Drug-positive
+logreg,E001652,Drug-positive,0.7092442379200091,Drug-positive
+logreg,E001666,Drug-positive,0.549642712833876,Drug-positive
+logreg,E000701,Drug-positive,0.8855946035032368,Drug-positive
+logreg,E000608,No drug,0.95109303180448,Drug-positive
+logreg,E000749,Drug-positive,0.653696851882423,Drug-positive
+logreg,E000841,Drug-positive,0.9425622380662243,Drug-positive
+logreg,E000859,Drug-positive,0.7999422783792784,Drug-positive
+logreg,E002114,No drug,0.7713097153664038,Drug-positive
+logreg,E001427,Drug-positive,0.7979413943384902,Drug-positive
+logreg,E000166,No drug,0.5264521339469376,Drug-positive
+logreg,E001006,No drug,0.10785161773733194,No drug
+logreg,E001238,Drug-positive,0.8849305354770616,Drug-positive
+logreg,E001927,Drug-positive,0.4855662275551373,No drug
+logreg,E001188,No drug,0.42069196407204285,No drug
+logreg,E000812,No drug,0.11239722710148697,No drug
+logreg,E000087,Drug-positive,0.1260498979500113,No drug
+logreg,E000798,No drug,0.5866791241780459,Drug-positive
+logreg,E001106,No drug,0.198872327929452,No drug
+logreg,E000934,No drug,0.43326319123825596,No drug
+logreg,E000629,No drug,0.2313122037663352,No drug
+logreg,E000185,Drug-positive,0.7395393746412217,Drug-positive
+logreg,E001953,No drug,0.511823834531422,Drug-positive
+logreg,E001007,Drug-positive,0.8569187175250822,Drug-positive
+logreg,E000996,Drug-positive,0.8676242167554963,Drug-positive
+logreg,E002083,No drug,0.5227359211878866,Drug-positive
+logreg,E000047,Drug-positive,0.7942622759101566,Drug-positive
+logreg,E001191,No drug,0.4180907826915663,No drug
+logreg,E001910,No drug,0.22383156308808005,No drug
+logreg,E001413,No drug,0.4368007407841495,No drug
+logreg,E000065,Drug-positive,0.06919609973605992,No drug
+logreg,E002165,Drug-positive,0.713076066246698,Drug-positive
+logreg,E001549,Drug-positive,0.41939734844051235,No drug
+logreg,E000227,No drug,0.23255884878777275,No drug
+logreg,E000632,No drug,0.9739459142771243,Drug-positive
+logreg,E001392,No drug,0.7825360598371881,Drug-positive
+logreg,E000284,No drug,0.006093676729588107,No drug
+logreg,E002013,Drug-positive,0.7633057860398913,Drug-positive
+logreg,E001539,Drug-positive,0.1476729291375132,No drug
+logreg,E002061,No drug,0.833005789867843,Drug-positive
+logreg,E001305,Drug-positive,0.5616746007535396,Drug-positive
+logreg,E002047,Drug-positive,0.6757589951429899,Drug-positive
+logreg,E002159,Drug-positive,0.6204046023931882,Drug-positive
+logreg,E000116,No drug,0.2976825238069463,No drug
+logreg,E000849,Drug-positive,0.15591206597206533,No drug
+logreg,E001711,Drug-positive,0.15459952713630834,No drug
+logreg,E001947,Drug-positive,0.6195947171279904,Drug-positive
+logreg,E000345,Drug-positive,0.8491888343954888,Drug-positive
+logreg,E000847,Drug-positive,0.9441556928100299,Drug-positive
+logreg,E001286,Drug-positive,0.7356367587912861,Drug-positive
+logreg,E000771,Drug-positive,0.04881898885872788,No drug
+logreg,E000074,No drug,0.1315433475617201,No drug
+logreg,E000547,No drug,0.23371151316937883,No drug
+logreg,E001330,Drug-positive,0.8447640316192332,Drug-positive
+logreg,E001213,Drug-positive,0.4585926114241591,No drug
+logreg,E000780,Drug-positive,0.809342306352638,Drug-positive
+logreg,E000755,No drug,0.6844218385697013,Drug-positive
+logreg,E000129,Drug-positive,0.8356653772266476,Drug-positive
+logreg,E000554,Drug-positive,0.5002218515890121,Drug-positive
+logreg,E001381,Drug-positive,0.25011499077191285,No drug
+logreg,E000357,Drug-positive,0.6937961139410752,Drug-positive
+logreg,E001568,Drug-positive,0.15171980371647406,No drug
+logreg,E000720,Drug-positive,0.5800182086093109,Drug-positive
+logreg,E001055,No drug,0.5410140242511545,Drug-positive
+logreg,E000578,No drug,0.5254532923711552,Drug-positive
+logreg,E000700,Drug-positive,0.3764840825505147,No drug
+logreg,E000870,No drug,0.11323952449620815,No drug
+logreg,E000119,Drug-positive,0.4846853501604723,No drug
+logreg,E001684,Drug-positive,0.9253530729749726,Drug-positive
+logreg,E001094,Drug-positive,0.6221095543247803,Drug-positive
+rforest,E000143,Drug-positive,0.686938749670556,Drug-positive
+rforest,E000130,No drug,0.38840836390627004,No drug
+rforest,E000974,No drug,0.3054560684656007,No drug
+rforest,E001372,Drug-positive,0.3525175690466056,No drug
+rforest,E001311,Drug-positive,0.8942559989465586,Drug-positive
+rforest,E001652,Drug-positive,0.4184493393427408,No drug
+rforest,E001666,Drug-positive,0.5846668534776649,Drug-positive
+rforest,E000701,Drug-positive,0.870377821847172,Drug-positive
+rforest,E000608,No drug,0.8400122916780336,Drug-positive
+rforest,E000749,Drug-positive,0.6715626173416269,Drug-positive
+rforest,E000841,Drug-positive,0.7240579113945437,Drug-positive
+rforest,E000859,Drug-positive,0.596055431207152,Drug-positive
+rforest,E002114,No drug,0.7727284899711995,Drug-positive
+rforest,E001427,Drug-positive,0.9041382006613813,Drug-positive
+rforest,E000166,No drug,0.38436163062919104,No drug
+rforest,E001006,No drug,0.412649391260673,No drug
+rforest,E001238,Drug-positive,0.7511862763602523,Drug-positive
+rforest,E001927,Drug-positive,0.7537085794773869,Drug-positive
+rforest,E001188,No drug,0.6612511748412762,Drug-positive
+rforest,E000812,No drug,0.37611213342010236,No drug
+rforest,E000087,Drug-positive,0.3402734105209928,No drug
+rforest,E000798,No drug,0.58580443551136,Drug-positive
+rforest,E001106,No drug,0.20777996702988602,No drug
+rforest,E000934,No drug,0.3133037869502679,No drug
+rforest,E000629,No drug,0.35514534099209344,No drug
+rforest,E000185,Drug-positive,0.6262078753002122,Drug-positive
+rforest,E001953,No drug,0.768969855668925,Drug-positive
+rforest,E001007,Drug-positive,0.3640929108341511,No drug
+rforest,E000996,Drug-positive,0.8016543116132097,Drug-positive
+rforest,E002083,No drug,0.2829307145846048,No drug
+rforest,E000047,Drug-positive,0.7402420371424162,Drug-positive
+rforest,E001191,No drug,0.404149767046428,No drug
+rforest,E001910,No drug,0.4015734835460652,No drug
+rforest,E001413,No drug,0.269906236407696,No drug
+rforest,E000065,Drug-positive,0.7326214625075651,Drug-positive
+rforest,E002165,Drug-positive,0.5334265101005723,Drug-positive
+rforest,E001549,Drug-positive,0.34226377707048866,No drug
+rforest,E000227,No drug,0.2915891102570388,No drug
+rforest,E000632,No drug,0.37056380532952504,No drug
+rforest,E001392,No drug,0.5433796692846952,Drug-positive
+rforest,E000284,No drug,0.220916362460816,No drug
+rforest,E002013,Drug-positive,0.6772135423693697,Drug-positive
+rforest,E001539,Drug-positive,0.4626030765695173,No drug
+rforest,E002061,No drug,0.8758787389896219,Drug-positive
+rforest,E001305,Drug-positive,0.7607561494247312,Drug-positive
+rforest,E002047,Drug-positive,0.7373880018336882,Drug-positive
+rforest,E002159,Drug-positive,0.8560542436277455,Drug-positive
+rforest,E000116,No drug,0.32169172855459294,No drug
+rforest,E000849,Drug-positive,0.32719266131824776,No drug
+rforest,E001711,Drug-positive,0.289389580278489,No drug
+rforest,E001947,Drug-positive,0.46484876620813226,No drug
+rforest,E000345,Drug-positive,0.8215565273834368,Drug-positive
+rforest,E000847,Drug-positive,0.8943180680198087,Drug-positive
+rforest,E001286,Drug-positive,0.7892022752109874,Drug-positive
+rforest,E000771,Drug-positive,0.25625908352137794,No drug
+rforest,E000074,No drug,0.34066987604571247,No drug
+rforest,E000547,No drug,0.25618346461479097,No drug
+rforest,E001330,Drug-positive,0.8181950053413233,Drug-positive
+rforest,E001213,Drug-positive,0.6003022226408578,Drug-positive
+rforest,E000780,Drug-positive,0.9145222887950807,Drug-positive
+rforest,E000755,No drug,0.582544745957735,Drug-positive
+rforest,E000129,Drug-positive,0.8172600720761595,Drug-positive
+rforest,E000554,Drug-positive,0.3759354961473276,No drug
+rforest,E001381,Drug-positive,0.37147764809962047,No drug
+rforest,E000357,Drug-positive,0.7149863773801508,Drug-positive
+rforest,E001568,Drug-positive,0.3008858364493937,No drug
+rforest,E000720,Drug-positive,0.8692894689784881,Drug-positive
+rforest,E001055,No drug,0.30464436009288737,No drug
+rforest,E000578,No drug,0.5890653917422776,Drug-positive
+rforest,E000700,Drug-positive,0.2577074773783536,No drug
+rforest,E000870,No drug,0.25402391235203875,No drug
+rforest,E000119,Drug-positive,0.40347157877030715,No drug
+rforest,E001684,Drug-positive,0.3076312324331127,No drug
+rforest,E001094,Drug-positive,0.3908828850770252,No drug
+hgb,E000143,Drug-positive,0.7096654004893764,Drug-positive
+hgb,E000130,No drug,0.1329957540741235,No drug
+hgb,E000974,No drug,0.02303031627177091,No drug
+hgb,E001372,Drug-positive,0.5643890822810662,Drug-positive
+hgb,E001311,Drug-positive,0.9973561539860714,Drug-positive
+hgb,E001652,Drug-positive,0.41996058194820934,No drug
+hgb,E001666,Drug-positive,0.40440662817645334,No drug
+hgb,E000701,Drug-positive,0.9696108762251086,Drug-positive
+hgb,E000608,No drug,0.9789148707634274,Drug-positive
+hgb,E000749,Drug-positive,0.8633959633196908,Drug-positive
+hgb,E000841,Drug-positive,0.9771689140549328,Drug-positive
+hgb,E000859,Drug-positive,0.27378578145214066,No drug
+hgb,E002114,No drug,0.9814030305216297,Drug-positive
+hgb,E001427,Drug-positive,0.9969245225033454,Drug-positive
+hgb,E000166,No drug,0.3961279317243233,No drug
+hgb,E001006,No drug,0.04790181621436573,No drug
+hgb,E001238,Drug-positive,0.905191984595491,Drug-positive
+hgb,E001927,Drug-positive,0.9434309609207984,Drug-positive
+hgb,E001188,No drug,0.9112234024283233,Drug-positive
+hgb,E000812,No drug,0.7597347765873428,Drug-positive
+hgb,E000087,Drug-positive,0.2585024496800466,No drug
+hgb,E000798,No drug,0.962824518866319,Drug-positive
+hgb,E001106,No drug,0.07970025847394091,No drug
+hgb,E000934,No drug,0.11018677853059418,No drug
+hgb,E000629,No drug,0.1833738062540636,No drug
+hgb,E000185,Drug-positive,0.9078961911697383,Drug-positive
+hgb,E001953,No drug,0.9727941555028641,Drug-positive
+hgb,E001007,Drug-positive,0.7860153865843874,Drug-positive
+hgb,E000996,Drug-positive,0.9260359972331883,Drug-positive
+hgb,E002083,No drug,0.016152065718074062,No drug
+hgb,E000047,Drug-positive,0.9878363094956714,Drug-positive
+hgb,E001191,No drug,0.5059946822487764,Drug-positive
+hgb,E001910,No drug,0.7697420727060511,Drug-positive
+hgb,E001413,No drug,0.13936571753417235,No drug
+hgb,E000065,Drug-positive,0.880313350572474,Drug-positive
+hgb,E002165,Drug-positive,0.23407461575783328,No drug
+hgb,E001549,Drug-positive,0.21264295996035726,No drug
+hgb,E000227,No drug,0.16651060252333033,No drug
+hgb,E000632,No drug,0.8953239871267679,Drug-positive
+hgb,E001392,No drug,0.8389069653070144,Drug-positive
+hgb,E000284,No drug,0.6452694757892795,Drug-positive
+hgb,E002013,Drug-positive,0.5397011292874259,Drug-positive
+hgb,E001539,Drug-positive,0.6213847525946535,Drug-positive
+hgb,E002061,No drug,0.9428074245168039,Drug-positive
+hgb,E001305,Drug-positive,0.8621877903056204,Drug-positive
+hgb,E002047,Drug-positive,0.8602527409453415,Drug-positive
+hgb,E002159,Drug-positive,0.9922561372501371,Drug-positive
+hgb,E000116,No drug,0.025054842669549056,No drug
+hgb,E000849,Drug-positive,0.22231404042442712,No drug
+hgb,E001711,Drug-positive,0.086232863053016,No drug
+hgb,E001947,Drug-positive,0.9696941663017326,Drug-positive
+hgb,E000345,Drug-positive,0.9321972546663012,Drug-positive
+hgb,E000847,Drug-positive,0.9989252667054748,Drug-positive
+hgb,E001286,Drug-positive,0.9016658684266704,Drug-positive
+hgb,E000771,Drug-positive,0.02669304984345272,No drug
+hgb,E000074,No drug,0.6769347422251822,Drug-positive
+hgb,E000547,No drug,0.022612757898355203,No drug
+hgb,E001330,Drug-positive,0.9348645350743151,Drug-positive
+hgb,E001213,Drug-positive,0.4715902687128682,No drug
+hgb,E000780,Drug-positive,0.9973033655300916,Drug-positive
+hgb,E000755,No drug,0.6267085491022063,Drug-positive
+hgb,E000129,Drug-positive,0.9759144964950667,Drug-positive
+hgb,E000554,Drug-positive,0.776748062059337,Drug-positive
+hgb,E001381,Drug-positive,0.8848120157849142,Drug-positive
+hgb,E000357,Drug-positive,0.973434118279642,Drug-positive
+hgb,E001568,Drug-positive,0.2631848695820019,No drug
+hgb,E000720,Drug-positive,0.9911567887260609,Drug-positive
+hgb,E001055,No drug,0.0061016680288717715,No drug
+hgb,E000578,No drug,0.5169697186860781,Drug-positive
+hgb,E000700,Drug-positive,0.01441702150178986,No drug
+hgb,E000870,No drug,0.039028763022377705,No drug
+hgb,E000119,Drug-positive,0.3198684971360572,No drug
+hgb,E001684,Drug-positive,0.11445742457236265,No drug
+hgb,E001094,Drug-positive,0.6165709238386999,Drug-positive

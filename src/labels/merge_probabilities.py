@@ -149,13 +149,19 @@ def main() -> None:
         match = (joined["argmax_class"] == joined["majority_label"]).mean()
         print(f"\n  Agreement on hard label: {match * 100:.1f}%")
 
-    # Compare against disposition
-    triage = pd.read_csv(DERIVED / "features_triage.csv")[
-        ["encounter_id", "encounter_disposition_label"]]
-    joined2 = final.merge(triage, on="encounter_id", how="left")
-    print("\n--- Argmax-class vs disposition ---")
-    print(pd.crosstab(joined2["argmax_class"],
-                      joined2["encounter_disposition_label"]).to_string())
+    # Compare against disposition (from outcomes.csv — canonical
+    # source; feature tables no longer carry the label).
+    outcomes_path = DERIVED / "outcomes.csv"
+    if outcomes_path.exists():
+        outcomes = pd.read_csv(outcomes_path)[
+            ["encounter_id", "encounter_disposition_label"]]
+        joined2 = final.merge(outcomes, on="encounter_id", how="left")
+        print("\n--- Argmax-class vs disposition ---")
+        print(pd.crosstab(joined2["argmax_class"],
+                          joined2["encounter_disposition_label"]).to_string())
+    else:
+        print("\n(outcomes.csv absent — skipping vs-disposition crosstab; "
+              "run src/labels/build_outcomes.py first.)")
 
 
 if __name__ == "__main__":

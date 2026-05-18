@@ -238,3 +238,29 @@ task2_disposition/out/
 .DS_Store
 .vscode/
 *.swp
+
+# ====================================================================
+# Merged from parent workspace .gitignore (SAEM-Hackathon/) — 2026-05-17
+# ====================================================================
+
+# Workspace conventions (Claude-safe sandbox)
+.claude/
+
+# Project docs kept local-only
+CLAUDE.md
+CHANGELOG.md
+
+# Broader data-file bans (parent workspace policy)
+out/
+private/
+*.xls
+
+# Editor / IDE leftovers
+Thumbs.db
+.idea/
+
+# derived/ pipeline outputs ARE tracked even when the broader data
+# rules would block them. (No top-level *.csv ban here, so this is a
+# no-op safeguard for future changes.)
+!derived/
+!derived/**

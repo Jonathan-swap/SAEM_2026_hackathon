@@ -23,6 +23,7 @@ Reports:
 """
 from __future__ import annotations
 
+import argparse
 from pathlib import Path
 
 import numpy as np
@@ -32,8 +33,9 @@ from sklearn.ensemble import HistGradientBoostingClassifier, RandomForestClassif
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.impute import SimpleImputer
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import (brier_score_loss, classification_report,
-                              confusion_matrix, log_loss, roc_auc_score)
+from sklearn.metrics import (average_precision_score, brier_score_loss,
+                              classification_report, confusion_matrix,
+                              log_loss, roc_auc_score)
 from sklearn.model_selection import StratifiedKFold
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
@@ -45,26 +47,51 @@ CLASSES = ["Discharge", "Floor", "ICU"]
 PROB_COLS = ["p_kraken", "p_triton", "p_coral", "p_none"]
 
 
-def load_data(use_drug_probs_as_features: bool = True
+def load_data(use_drug_probs_as_features: bool = True,
+              cohort: str = "drug-positive"
               ) -> tuple[pd.DataFrame, np.ndarray, np.ndarray]:
+    """Cohort options:
+      - ``drug-positive``: patients with ground_truth_drug != 0 (157
+        of 261). This is the brief's stated Task-2 cohort: predict
+        deterioration for festival-drug patients.
+      - ``all``: every encounter (261). None-class patients are
+        included; most disposition to Discharge.
+    """
     X = pd.read_csv(DERIVED / "features_fourh.csv")
-    # keep_default_na=False so the string "None" survives as a value
+    outcomes = pd.read_csv(DERIVED / "outcomes.csv")[
+        ["encounter_id", "ground_truth_drug", "ground_truth_drug_name",
+         "encounter_disposition_label"]]
     probs = pd.read_csv(DERIVED / "probs_avg.csv",
                          keep_default_na=False, na_values=[""])[
-        ["encounter_id", "argmax_class", *PROB_COLS]]
+        ["encounter_id", *PROB_COLS]]
 
-    df = X.merge(probs, on="encounter_id", how="inner")
+    # Defensive: outcomes never live in feature tables now, but
+    # if a stale CSV still has the column, drop it before merging
+    # so we don't end up with `_x`/`_y` suffix collisions.
+    for c in ("encounter_disposition_label", "ground_truth_drug",
+               "ground_truth_drug_name"):
+        if c in X.columns:
+            X = X.drop(columns=[c])
 
-    # Cohort filter: drug-positive only (argmax != None)
+    df = X.merge(outcomes, on="encounter_id", how="inner")
+    df = df.merge(probs, on="encounter_id", how="inner")
+
     n_before = len(df)
-    df = df[df["argmax_class"] != "None"].reset_index(drop=True)
-    print(f"Cohort filter (argmax != 'None'): {n_before} -> {len(df)} patients")
+    if cohort == "drug-positive":
+        df = df[df["ground_truth_drug"] != 0].reset_index(drop=True)
+        print(f"Cohort filter (drug-positive): "
+              f"{n_before} -> {len(df)} patients")
+    elif cohort == "all":
+        print(f"Cohort: all {n_before} patients (no filter)")
+    else:
+        raise ValueError(f"Unknown cohort: {cohort!r}")
 
     # Drop columns that should not be features
     drop = [
         "encounter_id",
         "encounter_arrival_date",
-        "argmax_class",  # categorical version of the prob columns; redundant
+        "ground_truth_drug",
+        "ground_truth_drug_name",
     ]
     # Optionally remove drug-class probs from features
     if not use_drug_probs_as_features:
@@ -131,8 +158,12 @@ def evaluate(model_name: str, X: pd.DataFrame,
     fold_logloss = []
     fold_acc = []
     fold_auc_macro = []
+    fold_prauc_macro = []
     fold_auc_per_class = {c: [] for c in CLASSES}
+    fold_prauc_per_class = {c: [] for c in CLASSES}
     fold_brier = {c: [] for c in CLASSES}
+    fold_bss = {c: [] for c in CLASSES}
+    fold_prev = {c: [] for c in CLASSES}
 
     oof_proba = np.zeros((len(X), len(CLASSES)))
     oof_pred = np.zeros(len(X), dtype=int)
@@ -169,13 +200,28 @@ def evaluate(model_name: str, X: pd.DataFrame,
             fold_auc_macro.append(float("nan"))
 
         for k, c in enumerate(CLASSES):
+            y_bin = (y[te] == k).astype(int)
+            prev = float(y_bin.mean())
+            fold_prev[c].append(prev)
             try:
                 fold_auc_per_class[c].append(
-                    roc_auc_score((y[te] == k).astype(int), p[:, k]))
+                    roc_auc_score(y_bin, p[:, k]))
             except ValueError:
                 fold_auc_per_class[c].append(float("nan"))
-            fold_brier[c].append(
-                brier_score_loss((y[te] == k).astype(int), p[:, k]))
+            try:
+                fold_prauc_per_class[c].append(
+                    average_precision_score(y_bin, p[:, k]))
+            except ValueError:
+                fold_prauc_per_class[c].append(float("nan"))
+            brier_val = float(brier_score_loss(y_bin, p[:, k]))
+            fold_brier[c].append(brier_val)
+            denom = prev * (1 - prev)
+            fold_bss[c].append((1.0 - brier_val / denom)
+                                 if denom > 0 else float("nan"))
+        # macro PR-AUC = mean of one-vs-rest AP across classes
+        fold_prauc_macro.append(
+            float(np.nanmean([fold_prauc_per_class[c][-1]
+                               for c in CLASSES])))
 
     return {
         "model": model_name,
@@ -185,20 +231,43 @@ def evaluate(model_name: str, X: pd.DataFrame,
         "acc_std": float(np.std(fold_acc)),
         "auc_macro_mean": float(np.nanmean(fold_auc_macro)),
         "auc_macro_std": float(np.nanstd(fold_auc_macro)),
+        "prauc_macro_mean": float(np.nanmean(fold_prauc_macro)),
+        "prauc_macro_std": float(np.nanstd(fold_prauc_macro)),
         "auc_discharge": float(np.nanmean(fold_auc_per_class["Discharge"])),
         "auc_floor": float(np.nanmean(fold_auc_per_class["Floor"])),
         "auc_icu": float(np.nanmean(fold_auc_per_class["ICU"])),
+        "prauc_discharge": float(np.nanmean(fold_prauc_per_class["Discharge"])),
+        "prauc_floor": float(np.nanmean(fold_prauc_per_class["Floor"])),
+        "prauc_icu": float(np.nanmean(fold_prauc_per_class["ICU"])),
         "brier_discharge": float(np.mean(fold_brier["Discharge"])),
         "brier_floor": float(np.mean(fold_brier["Floor"])),
         "brier_icu": float(np.mean(fold_brier["ICU"])),
+        "bss_discharge": float(np.nanmean(fold_bss["Discharge"])),
+        "bss_floor": float(np.nanmean(fold_bss["Floor"])),
+        "bss_icu": float(np.nanmean(fold_bss["ICU"])),
+        "prevalence_discharge": float(np.mean(fold_prev["Discharge"])),
+        "prevalence_floor": float(np.mean(fold_prev["Floor"])),
+        "prevalence_icu": float(np.mean(fold_prev["ICU"])),
         "oof_proba": oof_proba,
         "oof_pred": oof_pred,
     }
 
 
 def main() -> None:
+    ap = argparse.ArgumentParser(description=__doc__,
+                                  formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--cohort",
+                    choices=["drug-positive", "all"],
+                    default="drug-positive",
+                    help="Cohort to train on. drug-positive (default) "
+                         "matches the brief's Task-2 scope (n=157). "
+                         "'all' uses every encounter (n=261).")
+    args = ap.parse_args()
+    suffix = "" if args.cohort == "drug-positive" else "_all"
+
     print("="*78)
-    print("Task 2 baseline — disposition prediction (Discharge / Floor / ICU)")
+    print(f"Task 2 baseline — disposition prediction (cohort: "
+          f"{args.cohort})")
     print("="*78)
 
     # Two variants: with and without Task-1 drug-class probabilities
@@ -207,7 +276,8 @@ def main() -> None:
         ("WITHOUT drug-class probs (clinical features only)", False),
     ]:
         print(f"\n\n###### VARIANT: {variant_name} ######")
-        X, y, y_label = load_data(use_drug_probs_as_features=use_drug_probs)
+        X, y, y_label = load_data(use_drug_probs_as_features=use_drug_probs,
+                                    cohort=args.cohort)
 
         print(f"X: {X.shape}, y: {y.shape}")
         print(f"Disposition distribution: "
@@ -233,18 +303,30 @@ def main() -> None:
             oof_store[name] = {"proba": r.pop("oof_proba"),
                                 "pred": r.pop("oof_pred")}
             results.append(r)
-            print(f"  log-loss:        {r['logloss_mean']:.4f} "
+            print(f"  log-loss:           {r['logloss_mean']:.4f} "
                   f"(+/- {r['logloss_std']:.4f})")
-            print(f"  accuracy:        {r['acc_mean']:.4f} "
+            print(f"  accuracy:           {r['acc_mean']:.4f} "
                   f"(+/- {r['acc_std']:.4f})")
-            print(f"  macro AUC:       {r['auc_macro_mean']:.4f} "
+            print(f"  macro ROC-AUC:      {r['auc_macro_mean']:.4f} "
                   f"(+/- {r['auc_macro_std']:.4f})")
-            print(f"  per-class AUC:   "
+            print(f"  OVR ROC-AUC:        "
                   f"D={r['auc_discharge']:.3f}  F={r['auc_floor']:.3f}  "
                   f"ICU={r['auc_icu']:.3f}")
-            print(f"  per-class Brier: "
+            print(f"  macro PR-AUC:       {r['prauc_macro_mean']:.4f} "
+                  f"(+/- {r['prauc_macro_std']:.4f})")
+            print(f"  OVR PR-AUC:         "
+                  f"D={r['prauc_discharge']:.3f}  F={r['prauc_floor']:.3f}  "
+                  f"ICU={r['prauc_icu']:.3f}")
+            print(f"  prevalence:         "
+                  f"D={r['prevalence_discharge']:.3f}  "
+                  f"F={r['prevalence_floor']:.3f}  "
+                  f"ICU={r['prevalence_icu']:.3f}")
+            print(f"  per-class Brier:    "
                   f"D={r['brier_discharge']:.3f}  F={r['brier_floor']:.3f}  "
                   f"ICU={r['brier_icu']:.3f}")
+            print(f"  Brier Skill Score:  "
+                  f"D={r['bss_discharge']:+.3f}  F={r['bss_floor']:+.3f}  "
+                  f"ICU={r['bss_icu']:+.3f}")
 
         print(f"\n--- SUMMARY ({variant_name}) ---")
         summary = pd.DataFrame(results).set_index("model")
@@ -266,24 +348,30 @@ def main() -> None:
                                       target_names=CLASSES, digits=3,
                                       zero_division=0))
 
-        # Save artifacts for the WITH-probs variant
+        # Save artifacts for the WITH-probs variant.
+        # Filename: task2_baseline_summary.csv for drug-positive
+        # (default), task2_baseline_summary_all.csv for the
+        # all-patients variant. Keeps both side by side.
         if use_drug_probs:
             ids = pd.read_csv(DERIVED / "features_fourh.csv")[
                 ["encounter_id"]]
-            argmax_class = pd.read_csv(DERIVED / "probs_avg.csv",
-                                         keep_default_na=False,
-                                         na_values=[""])[
-                ["encounter_id", "argmax_class"]]
-            ids = ids.merge(argmax_class, on="encounter_id")
-            cohort = ids[ids["argmax_class"] != "None"].reset_index(drop=True)
+            gt = pd.read_csv(DERIVED / "ground_truth.csv")[
+                ["encounter_id", "ground_truth_drug"]]
+            ids = ids.merge(gt, on="encounter_id")
+            if args.cohort == "drug-positive":
+                cohort_ids = ids[ids["ground_truth_drug"] != 0]\
+                    .reset_index(drop=True)
+            else:
+                cohort_ids = ids.reset_index(drop=True)
             oof = pd.DataFrame(oof_store[best]["proba"],
                                 columns=[f"p_{c}" for c in CLASSES])
-            oof.insert(0, "encounter_id", cohort["encounter_id"].values)
+            oof.insert(0, "encounter_id",
+                        cohort_ids["encounter_id"].values)
             oof["pred_argmax"] = [CLASSES[i] for i in oof_store[best]["pred"]]
             oof["true_label"] = y_label
-            oof_path = DERIVED / "task2_oof_predictions.csv"
+            oof_path = DERIVED / f"task2_oof_predictions{suffix}.csv"
             oof.to_csv(oof_path, index=False)
-            summary_path = DERIVED / "task2_baseline_summary.csv"
+            summary_path = DERIVED / f"task2_baseline_summary{suffix}.csv"
             summary.to_csv(summary_path)
             print(f"\nSaved: {oof_path}")
             print(f"Saved: {summary_path}")
