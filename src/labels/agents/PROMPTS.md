@@ -1,15 +1,93 @@
-# Subagent Prompts — Probability Extraction (10 Agents, v6-aligned)
+# Subagent Prompts — Probability Extraction (v7, 5-class with Siren Spark)
 
-These are the exact prompts sent to ten independent Claude Code
-subagents (Opus model) that produced `derived/probs_1.csv` through
-`derived/probs_10.csv`. Each agent runs in its own context with no
-visibility into the others' outputs; agreement across them is the
-cross-validation signal.
+These are the prompts / scoring lenses applied by ten independent
+"agents" that produce `derived/probs_1.csv` through `probs_10.csv`.
+Each agent operates in its own context with no visibility into the
+others' outputs; cross-agent agreement is the validation signal.
 
-All ten use the same fixed drug → toxidrome mapping for cross-
-comparability when averaging. They differ in **which fields they
-consult** (Agents 1–5) and **what reasoning paradigm they apply**
-(Agents 6–10).
+## Phase-2 (v7) — 5 classes including "Siren Spark"
+
+The Phase-2 dataset adds a brand-new synthetic drug called **Siren
+Spark**. Per the SAEM26 Hackathon challenge release
+(`data2/SAEM26 Hackathon Hackathon Challenge 05_18_2026.pdf`):
+
+> "Leviathan Catalyst Laboratories have created a brand new synthetic
+> party drug which has been labelled 'Siren Spark.' ... no one has any
+> idea how common this drug is at the festival."
+
+There is **no ground truth and no published clinical profile** for
+Siren Spark. The 5th class therefore has to be inferred from the data
+itself — a novel-class / open-set classification problem.
+
+**5-class outputs** — each agent emits columns
+`encounter_id, p_none, p_kraken, p_triton, p_coral, p_siren_spark`
+(rows sum to 1.0, ±0.005) for all Phase-2 records (139 in Release 2).
+
+**Per-agent flow:**
+1. Score 4-class probabilities (None / Kraken / Triton / Coral) using
+   the agent's lens — the same regex-lexicon-based rubrics as in v6,
+   but applied to the Phase-2 narratives in
+   `derived/phase2/narratives_fourh.jsonl`.
+2. Extend to 5 classes via the shared `add_siren_spark` utility
+   (`src/labels/agents/_siren_spark.py`). Siren Spark probability is
+   built from two signals:
+     - **Confidence signal** `U = 1 - max(p_4class)` per row. Encounters
+       that don't fit any of the 4 known classes are candidates.
+     - **Feature-anomaly signal** `F` = mean |z-score| of triage vitals
+       and labs vs the Phase-1 reference distribution (clipped to
+       [0,1]). Encounters with feature values far from any Phase-1
+       archetype are candidates.
+   `p_siren_raw = α·U + (1−α)·F`; clipped to `[0, cap]` after a
+   per-agent `sharpness` multiplier. The remaining 4-class mass is
+   scaled by `(1 − p_siren)`.
+
+`α`, `sharpness`, and `cap` are the per-agent diversity knobs — they
+let each lens express a different prior on how aggressively to invoke
+the "this is the new drug" hypothesis.
+
+### v7 agent table (the 10 lenses)
+
+| # | Lens | α | sharp | cap | Output |
+|--:|------|---:|---:|---:|--------|
+| 1 | Equal weighting across all narrative fields | 0.6 | 1.0 | 0.65 | `probs_1.csv` |
+| 2 | Toxidrome-led — PE tokens + peak labs | 0.3 | 1.1 | 0.70 | `probs_2.csv` |
+| 3 | HPI-led — defining-token search | 0.6 | 1.0 | 0.65 | `probs_3.csv` |
+| 4 | MDM-led (boilerplate dampened) | 0.5 | 1.0 | 0.65 | `probs_4.csv` |
+| 5 | Conservative / Bayesian — softer scores | 0.7 | 1.3 | 0.75 | `probs_5.csv` |
+| 6 | Treatment-response trajectory | 0.5 | 1.0 | 0.65 | `probs_6.csv` |
+| 7 | Vitals/features-only (narrative ignored) | 0.0 | 1.3 | 0.75 | `probs_7.csv` |
+| 8 | Counterfactual / negative-evidence | 0.85 | 1.4 | 0.80 | `probs_8.csv` |
+| 9 | Recovery-pattern pharmacokinetics | 0.5 | 1.0 | 0.65 | `probs_9.csv` |
+| 10 | Minute-0 tokens (chief complaint + brief note) | 0.6 | 1.0 | 0.65 | `probs_10.csv` |
+
+**Running:**
+```powershell
+.venv\Scripts\python.exe src\labels\agents\run_5class_agents.py
+.venv\Scripts\python.exe src\labels\merge_5class_probs_phase2.py
+```
+
+Outputs land in `derived/phase2/`. The merged consensus is
+`derived/phase2/probs_avg.csv`.
+
+### Why a single driver instead of 10 scripts (v7 design note)
+
+In v6 each agent was a separate script with bespoke regex rubrics.
+For v7 we consolidated into one driver (`run_5class_agents.py`) that
+hosts the 10 lenses inline. The reasoning: by Phase-2 the original
+10 agent scripts had drifted into inconsistent hardcoded paths and
+were no longer runnable as a coherent set. The unified driver
+preserves the diversity (different field weights × different
+reasoning paradigms × different Siren Spark configurations) while
+making the ensemble reproducible from a single command.
+
+---
+
+## Pre-v7 (4-class, Phase-1) — kept for reference
+
+The remainder of this document describes the original v6-aligned
+4-class ensemble. The v7 driver above reuses the same regex lexicons
+and the same drug→toxidrome mapping; only the output schema and the
+5th-class extension are new.
 
 | Agent | Lens | Output |
 |------:|------|--------|
@@ -24,7 +102,7 @@ consult** (Agents 1–5) and **what reasoning paradigm they apply**
 | 9 | Recovery-pattern pharmacokinetics | `probs_9.csv` |
 | 10 | v6 PE-token + peak-lab cluster matching | `probs_10.csv` |
 
-Each agent emits a CSV with columns `encounter_id, p_kraken,
+Each Phase-1 agent emits a CSV with columns `encounter_id, p_kraken,
 p_triton, p_coral, p_none` for all 261 records; every row sums to
 1.0 (±0.005).
 
