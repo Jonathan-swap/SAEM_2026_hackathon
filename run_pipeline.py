@@ -46,6 +46,7 @@ STEPS = [
     ("extract_differentials","src/features/extract_differentials.py"),
     ("extract_note_features","src/features/extract_note_features.py"),
     ("load_ground_truth",    "src/labels/load_ground_truth.py"),
+    ("build_outcomes",       "src/labels/build_outcomes.py"),
 ]
 
 POST_AGENT_STEPS = [

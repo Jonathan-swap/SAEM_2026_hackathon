@@ -54,7 +54,7 @@ from sklearn.preprocessing import StandardScaler
 ROOT = Path(__file__).resolve().parents[2]
 DERIVED = ROOT / "derived"
 
-GROUND_TRUTH_PATH = DERIVED / "ground_truth.csv"
+OUTCOMES_PATH = DERIVED / "outcomes.csv"
 
 DRUG_CLASSES = ["None", "Kraken Candy", "Triton Tabs", "Coral Dust"]
 DISPO_CLASSES = ["Discharge", "Floor", "ICU"]
@@ -122,6 +122,11 @@ def cluster_one(
     """
     print(f"\n{'='*72}\nClustering — {name}\n{'='*72}")
     df = pd.read_csv(features_path)
+    # Defensive: features files must never carry outcome columns.
+    for c in ("encounter_disposition_label", "ground_truth_drug",
+               "ground_truth_drug_name"):
+        if c in df.columns:
+            df = df.drop(columns=[c])
     df = df.merge(ground_truth, on="encounter_id", how="inner")
     n_before = len(df)
     if cohort_filter is not None:
@@ -406,9 +411,12 @@ def _indent(s: str, prefix: str = "    ") -> str:
 # ---------- orchestration --------------------------------------------
 
 def main() -> None:
-    gt = pd.read_csv(GROUND_TRUTH_PATH)
-    print(f"Ground truth: {len(gt)} rows, classes = "
-          f"{gt['ground_truth_drug_name'].value_counts().to_dict()}")
+    gt = pd.read_csv(OUTCOMES_PATH)
+    print(f"Outcomes file: {len(gt)} rows")
+    print(f"  drug classes:  "
+          f"{gt['ground_truth_drug_name'].fillna('None').value_counts().to_dict()}")
+    print(f"  disposition:   "
+          f"{gt['encounter_disposition_label'].value_counts().to_dict()}")
 
     # Task 1 — all 261 encounters, triage features, 4 expected clusters
     # (None + 3 drugs). Truth = drug class.

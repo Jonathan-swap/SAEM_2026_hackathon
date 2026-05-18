@@ -1,0 +1,262 @@
+encounter_id,ground_truth_drug,ground_truth_drug_name,encounter_disposition_label
+E000005,0,,ICU
+E000022,3,Coral Dust,Floor
+E000035,2,Triton Tabs,Discharge
+E000047,2,Triton Tabs,Discharge
+E000048,3,Coral Dust,Discharge
+E000061,2,Triton Tabs,Discharge
+E000064,0,,Floor
+E000065,3,Coral Dust,Discharge
+E000074,0,,Discharge
+E000087,2,Triton Tabs,ICU
+E000099,3,Coral Dust,Discharge
+E000116,0,,Floor
+E000119,1,Kraken Candy,Floor
+E000120,2,Triton Tabs,Discharge
+E000121,1,Kraken Candy,Floor
+E000129,2,Triton Tabs,Discharge
+E000130,0,,ICU
+E000133,3,Coral Dust,Discharge
+E000143,3,Coral Dust,Discharge
+E000144,0,,Discharge
+E000153,2,Triton Tabs,Discharge
+E000154,0,,ICU
+E000166,0,,Floor
+E000173,0,,Floor
+E000174,0,,ICU
+E000178,0,,Discharge
+E000185,1,Kraken Candy,Discharge
+E000199,0,,Floor
+E000218,2,Triton Tabs,Discharge
+E000225,0,,Discharge
+E000227,0,,Floor
+E000259,0,,ICU
+E000262,3,Coral Dust,Discharge
+E000265,0,,Floor
+E000267,1,Kraken Candy,Discharge
+E000275,0,,ICU
+E000284,0,,Floor
+E000286,1,Kraken Candy,ICU
+E000292,1,Kraken Candy,Discharge
+E000296,3,Coral Dust,Floor
+E000311,0,,Discharge
+E000335,0,,ICU
+E000336,3,Coral Dust,Discharge
+E000345,2,Triton Tabs,Discharge
+E000353,0,,Discharge
+E000357,1,Kraken Candy,Discharge
+E000358,2,Triton Tabs,ICU
+E000363,3,Coral Dust,Discharge
+E000370,1,Kraken Candy,Discharge
+E000383,3,Coral Dust,Discharge
+E000393,0,,ICU
+E000400,0,,Discharge
+E000408,2,Triton Tabs,Discharge
+E000424,0,,Floor
+E000435,3,Coral Dust,Discharge
+E000437,0,,Discharge
+E000439,3,Coral Dust,Discharge
+E000444,2,Triton Tabs,Discharge
+E000457,3,Coral Dust,Discharge
+E000485,1,Kraken Candy,Discharge
+E000490,0,,Floor
+E000507,2,Triton Tabs,Discharge
+E000511,2,Triton Tabs,Discharge
+E000512,1,Kraken Candy,Discharge
+E000547,0,,Floor
+E000554,1,Kraken Candy,Floor
+E000557,0,,Floor
+E000578,0,,Discharge
+E000600,3,Coral Dust,Discharge
+E000608,0,,Discharge
+E000617,3,Coral Dust,Discharge
+E000629,0,,ICU
+E000632,0,,ICU
+E000642,0,,Floor
+E000644,0,,ICU
+E000653,3,Coral Dust,Discharge
+E000654,1,Kraken Candy,Discharge
+E000660,0,,Discharge
+E000663,0,,ICU
+E000673,0,,ICU
+E000676,2,Triton Tabs,Discharge
+E000677,2,Triton Tabs,Discharge
+E000697,0,,Discharge
+E000700,3,Coral Dust,Discharge
+E000701,2,Triton Tabs,Discharge
+E000711,3,Coral Dust,Discharge
+E000720,1,Kraken Candy,Discharge
+E000722,2,Triton Tabs,Discharge
+E000731,2,Triton Tabs,Discharge
+E000737,1,Kraken Candy,Discharge
+E000749,2,Triton Tabs,Discharge
+E000755,0,,Discharge
+E000771,1,Kraken Candy,Floor
+E000780,2,Triton Tabs,Discharge
+E000782,0,,Discharge
+E000786,3,Coral Dust,Discharge
+E000798,0,,Discharge
+E000803,2,Triton Tabs,Discharge
+E000807,2,Triton Tabs,Discharge
+E000812,0,,ICU
+E000814,1,Kraken Candy,ICU
+E000818,1,Kraken Candy,Discharge
+E000825,0,,Discharge
+E000826,0,,Floor
+E000841,1,Kraken Candy,Discharge
+E000847,2,Triton Tabs,Discharge
+E000849,1,Kraken Candy,ICU
+E000859,2,Triton Tabs,Discharge
+E000870,0,,Discharge
+E000880,2,Triton Tabs,Discharge
+E000882,3,Coral Dust,Discharge
+E000885,2,Triton Tabs,Discharge
+E000894,3,Coral Dust,Discharge
+E000901,3,Coral Dust,Discharge
+E000910,2,Triton Tabs,Discharge
+E000915,2,Triton Tabs,Discharge
+E000924,1,Kraken Candy,Discharge
+E000934,0,,Discharge
+E000941,0,,ICU
+E000946,2,Triton Tabs,Discharge
+E000949,0,,Discharge
+E000969,0,,Discharge
+E000974,0,,Floor
+E000995,1,Kraken Candy,ICU
+E000996,1,Kraken Candy,Discharge
+E001002,0,,Discharge
+E001006,0,,Discharge
+E001007,1,Kraken Candy,Floor
+E001010,1,Kraken Candy,Discharge
+E001012,0,,Floor
+E001014,2,Triton Tabs,Discharge
+E001029,2,Triton Tabs,Floor
+E001030,0,,Discharge
+E001053,0,,Discharge
+E001055,0,,Floor
+E001072,2,Triton Tabs,Discharge
+E001094,3,Coral Dust,Discharge
+E001106,0,,ICU
+E001113,3,Coral Dust,Discharge
+E001115,2,Triton Tabs,Discharge
+E001138,3,Coral Dust,Discharge
+E001143,2,Triton Tabs,Discharge
+E001159,3,Coral Dust,Discharge
+E001160,0,,Discharge
+E001165,0,,Discharge
+E001167,1,Kraken Candy,Floor
+E001170,0,,ICU
+E001178,2,Triton Tabs,Discharge
+E001179,2,Triton Tabs,Floor
+E001188,0,,Discharge
+E001191,0,,Floor
+E001206,1,Kraken Candy,Discharge
+E001213,1,Kraken Candy,Discharge
+E001219,0,,ICU
+E001220,3,Coral Dust,ICU
+E001232,0,,Discharge
+E001238,1,Kraken Candy,Discharge
+E001239,0,,Discharge
+E001245,0,,Discharge
+E001261,1,Kraken Candy,Discharge
+E001266,0,,Floor
+E001274,3,Coral Dust,Floor
+E001282,3,Coral Dust,Discharge
+E001286,3,Coral Dust,Discharge
+E001305,1,Kraken Candy,Discharge
+E001311,1,Kraken Candy,Discharge
+E001313,1,Kraken Candy,Discharge
+E001316,0,,ICU
+E001330,3,Coral Dust,Discharge
+E001331,3,Coral Dust,Discharge
+E001352,1,Kraken Candy,Floor
+E001357,0,,Discharge
+E001363,0,,Discharge
+E001370,3,Coral Dust,Discharge
+E001371,0,,ICU
+E001372,1,Kraken Candy,Floor
+E001380,1,Kraken Candy,Discharge
+E001381,1,Kraken Candy,ICU
+E001392,0,,Discharge
+E001401,3,Coral Dust,Discharge
+E001412,1,Kraken Candy,ICU
+E001413,0,,Floor
+E001418,0,,Discharge
+E001419,0,,Discharge
+E001427,3,Coral Dust,Discharge
+E001431,0,,Discharge
+E001464,1,Kraken Candy,Discharge
+E001472,0,,Floor
+E001502,0,,Floor
+E001504,0,,Discharge
+E001506,0,,Discharge
+E001532,0,,Floor
+E001539,3,Coral Dust,Discharge
+E001549,1,Kraken Candy,ICU
+E001562,1,Kraken Candy,Discharge
+E001568,2,Triton Tabs,Discharge
+E001573,2,Triton Tabs,Discharge
+E001578,0,,Floor
+E001589,3,Coral Dust,Discharge
+E001597,0,,Floor
+E001622,0,,ICU
+E001627,2,Triton Tabs,Discharge
+E001640,2,Triton Tabs,Discharge
+E001648,1,Kraken Candy,ICU
+E001652,1,Kraken Candy,Floor
+E001666,2,Triton Tabs,Discharge
+E001672,2,Triton Tabs,Discharge
+E001676,1,Kraken Candy,Discharge
+E001684,1,Kraken Candy,ICU
+E001688,0,,Discharge
+E001703,1,Kraken Candy,ICU
+E001706,2,Triton Tabs,Discharge
+E001707,0,,ICU
+E001711,1,Kraken Candy,Floor
+E001712,2,Triton Tabs,Discharge
+E001729,3,Coral Dust,Floor
+E001732,0,,Discharge
+E001761,0,,Floor
+E001785,0,,Discharge
+E001811,0,,Discharge
+E001813,0,,Floor
+E001841,3,Coral Dust,Discharge
+E001864,2,Triton Tabs,Discharge
+E001865,3,Coral Dust,Floor
+E001885,0,,ICU
+E001889,0,,Floor
+E001910,0,,ICU
+E001918,2,Triton Tabs,Discharge
+E001927,2,Triton Tabs,Discharge
+E001944,0,,Discharge
+E001947,1,Kraken Candy,Discharge
+E001949,3,Coral Dust,Discharge
+E001953,0,,Discharge
+E001957,1,Kraken Candy,Floor
+E001976,1,Kraken Candy,Floor
+E001980,3,Coral Dust,Discharge
+E001993,3,Coral Dust,Discharge
+E002007,0,,Discharge
+E002013,1,Kraken Candy,Discharge
+E002040,3,Coral Dust,Discharge
+E002043,3,Coral Dust,Discharge
+E002047,1,Kraken Candy,Discharge
+E002058,2,Triton Tabs,Discharge
+E002061,0,,Discharge
+E002070,0,,Discharge
+E002076,1,Kraken Candy,Discharge
+E002083,0,,Floor
+E002101,2,Triton Tabs,Floor
+E002114,0,,Discharge
+E002141,1,Kraken Candy,Floor
+E002148,1,Kraken Candy,Discharge
+E002149,0,,Discharge
+E002152,3,Coral Dust,Discharge
+E002159,3,Coral Dust,Discharge
+E002161,1,Kraken Candy,Discharge
+E002165,1,Kraken Candy,Discharge
+E002173,0,,Floor
+E002180,2,Triton Tabs,Discharge
+E002186,0,,Discharge
+E002188,1,Kraken Candy,ICU
+E002190,1,Kraken Candy,Floor

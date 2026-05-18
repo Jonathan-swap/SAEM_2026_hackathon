@@ -127,9 +127,13 @@ def run_task1() -> dict:
     print("=" * 78)
 
     X_all = pd.read_csv(DERIVED / "features_triage.csv")
-    gt = pd.read_csv(DERIVED / "ground_truth.csv")[
+    outcomes = pd.read_csv(DERIVED / "outcomes.csv")[
         ["encounter_id", "ground_truth_drug"]]
-    df = X_all.merge(gt, on="encounter_id", how="inner")
+    for c in ("encounter_disposition_label", "ground_truth_drug",
+               "ground_truth_drug_name"):
+        if c in X_all.columns:
+            X_all = X_all.drop(columns=[c])
+    df = X_all.merge(outcomes, on="encounter_id", how="inner")
 
     is_train, is_test, train_max, test_date = temporal_split(df)
     print(f"Train: {is_train.sum()} encounters, dates up to {train_max.date()}")
@@ -279,9 +283,14 @@ def run_task2() -> dict:
     print("=" * 78)
 
     X_all = pd.read_csv(DERIVED / "features_fourh.csv")
-    gt = pd.read_csv(DERIVED / "ground_truth.csv")[
-        ["encounter_id", "ground_truth_drug"]]
-    df = X_all.merge(gt, on="encounter_id", how="inner")
+    outcomes = pd.read_csv(DERIVED / "outcomes.csv")[
+        ["encounter_id", "ground_truth_drug", "ground_truth_drug_name",
+         "encounter_disposition_label"]]
+    for c in ("encounter_disposition_label", "ground_truth_drug",
+               "ground_truth_drug_name"):
+        if c in X_all.columns:
+            X_all = X_all.drop(columns=[c])
+    df = X_all.merge(outcomes, on="encounter_id", how="inner")
     n_before = len(df)
     df = df[df["ground_truth_drug"] != 0].reset_index(drop=True)
     print(f"Cohort filter (drug-positive): {n_before} -> {len(df)} patients")

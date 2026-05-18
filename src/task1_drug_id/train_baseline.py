@@ -47,20 +47,29 @@ CLASSES = ["None", "Kraken Candy", "Triton Tabs", "Coral Dust"]
 
 def load_data() -> tuple[pd.DataFrame, np.ndarray]:
     X = pd.read_csv(DERIVED / "features_triage.csv")
-    gt = pd.read_csv(DERIVED / "ground_truth.csv")[
+    outcomes = pd.read_csv(DERIVED / "outcomes.csv")[
         ["encounter_id", "ground_truth_drug"]]
-    df = X.merge(gt, on="encounter_id", how="inner")
-    assert len(df) == len(X) == len(gt), "Row count mismatch"
+    # Defensive drop in case a stale features_triage.csv still
+    # carries the outcome columns (it shouldn't, post-leakage-fix).
+    for c in ("encounter_disposition_label", "ground_truth_drug",
+               "ground_truth_drug_name"):
+        if c in X.columns:
+            X = X.drop(columns=[c])
+    df = X.merge(outcomes, on="encounter_id", how="inner")
+    assert len(df) == len(X) == len(outcomes), "Row count mismatch"
 
     # Drop columns that are not legal Task-1 inputs
     drop = [
         "encounter_id",
         "encounter_arrival_date",
-        "encounter_disposition_label",  # Task 2 target, not Task 1 input
+        "encounter_disposition_label",  # Task 2 target, never a feature
     ]
     drop = [c for c in drop if c in df.columns]
     y = df["ground_truth_drug"].to_numpy(dtype=int)
     X_df = df.drop(columns=drop + ["ground_truth_drug"])
+    # Guard: target must not leak into X
+    assert "ground_truth_drug" not in X_df.columns
+    assert "encounter_disposition_label" not in X_df.columns
     return X_df, y
 
 

@@ -40,15 +40,21 @@ def main() -> None:
     fourh = pd.read_csv(DERIVED / "features_fourh.csv")
     print(f"\nfeatures_fourh.csv shape: {fourh.shape}")
 
-    # Check 1 - target column present in the source feature table
+    # Check 1 - target column must NOT be in the feature table any more.
+    # Outcomes now live exclusively in derived/outcomes.csv.
     target = "encounter_disposition_label"
     if target in fourh.columns:
-        print(f"\n[1] OK   {target!r} IS present in features_fourh.csv "
-              "(legitimate — that's where the target lives).")
-    else:
-        print(f"\n[1] FAIL {target!r} not in features_fourh.csv "
-              "— Task-2 trainer cannot read its target.")
+        print(f"\n[1] FAIL {target!r} IS still in features_fourh.csv. "
+              "Outcomes must live only in derived/outcomes.csv.")
         sys.exit(1)
+    print(f"\n[1] OK   {target!r} is NOT in features_fourh.csv "
+          "(outcomes live only in derived/outcomes.csv).")
+    out = pd.read_csv(DERIVED / "outcomes.csv")
+    if target not in out.columns:
+        print(f"     FAIL: outcomes.csv missing {target!r}.")
+        sys.exit(1)
+    print(f"     OK   outcomes.csv has {target!r} for "
+          f"{out[target].notna().sum()} of {len(out)} encounters.")
 
     # Check 2 - load_data() must REMOVE the target from X
     print(f"\n[2] Running Task-2 load_data() to inspect what reaches X...")

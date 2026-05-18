@@ -58,13 +58,22 @@ def load_data(use_drug_probs_as_features: bool = True,
         included; most disposition to Discharge.
     """
     X = pd.read_csv(DERIVED / "features_fourh.csv")
-    gt = pd.read_csv(DERIVED / "ground_truth.csv")[
-        ["encounter_id", "ground_truth_drug", "ground_truth_drug_name"]]
+    outcomes = pd.read_csv(DERIVED / "outcomes.csv")[
+        ["encounter_id", "ground_truth_drug", "ground_truth_drug_name",
+         "encounter_disposition_label"]]
     probs = pd.read_csv(DERIVED / "probs_avg.csv",
                          keep_default_na=False, na_values=[""])[
         ["encounter_id", *PROB_COLS]]
 
-    df = X.merge(gt, on="encounter_id", how="inner")
+    # Defensive: outcomes never live in feature tables now, but
+    # if a stale CSV still has the column, drop it before merging
+    # so we don't end up with `_x`/`_y` suffix collisions.
+    for c in ("encounter_disposition_label", "ground_truth_drug",
+               "ground_truth_drug_name"):
+        if c in X.columns:
+            X = X.drop(columns=[c])
+
+    df = X.merge(outcomes, on="encounter_id", how="inner")
     df = df.merge(probs, on="encounter_id", how="inner")
 
     n_before = len(df)

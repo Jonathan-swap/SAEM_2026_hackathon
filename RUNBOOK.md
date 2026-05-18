@@ -86,11 +86,18 @@ Steps executed (in order):
 | 3 | `src/features/extract_time_features.py` | adds Groups A–G time features (capped at min ≤ 240) |
 | 4 | `src/features/extract_differentials.py` | adds triage↔4h diffs to `features_fourh.csv` |
 | 5 | `src/features/extract_note_features.py` | adds parsed onset minutes + festival flags |
-| 6 | `src/labels/load_ground_truth.py`       | `derived/ground_truth.csv` |
+| 6 | `src/labels/load_ground_truth.py`       | `derived/ground_truth.csv` (drug class) |
+| 7 | `src/labels/build_outcomes.py`          | `derived/outcomes.csv` (drug class + disposition) |
 
 Pass criterion: each step logs `OK` and the time-features script ends
 with `OK: no leakage; triage features contain only arrival-time +
 minute-0 signals.`
+
+After step 7, **`derived/outcomes.csv`** is the canonical source for
+BOTH supervised labels: drug class (Task 1) and disposition (Task 2).
+The feature tables (`features_triage.csv`, `features_fourh.csv`)
+**do NOT contain any outcome columns** — every Task-1 and Task-2
+trainer pulls labels from `outcomes.csv` exclusively.
 
 ### 4.1. v6 features (run manually after §4)
 
