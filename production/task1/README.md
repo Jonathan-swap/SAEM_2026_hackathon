@@ -24,7 +24,7 @@ elif md5(eid)/2^64 <  triton_prev -> Triton     (drug_class = 2)
 else                              -> Coral      (drug_class = 3)
 
 tau_drug    = 0.57
-tau_kraken  = 0.45
+tau_kraken  = 0.5
 triton_prev = 0.5152
 ```
 
@@ -55,6 +55,6 @@ python production/predict.py path/to/features_triage.csv path/to/out.csv
 - Python: `3.13.11`
 - scikit-learn: `1.8.0`
 - numpy: `2.4.4`
-- Fitted: `2026-05-18T16:32:21Z`
+- Fitted: `2026-05-18T17:01:27Z`
 - Feature columns hash: `e155a51a7ed5d127d78b3e0d399e9dcb` (sha-style fingerprint
   of the `feature_columns` list; use it to detect schema drift in new data)

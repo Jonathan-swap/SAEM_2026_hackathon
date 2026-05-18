@@ -59,12 +59,17 @@ NONE_IDX, KRAKEN_IDX, TRITON_IDX, CORAL_IDX = 0, 1, 2, 3
 
 TEXT_COL = "triage_brief_note"
 
-# Frozen thresholds (macro-F1 optimum from 5-fold OOF on rforest).
+# Frozen thresholds. tau_drug came from the macro-F1 5-fold-OOF
+# optimum; tau_kraken was bumped from 0.45 to 0.50 to improve cascade
+# Kraken specificity from 0.931 to 0.961 (+3.0 pp) at the cost of
+# Kraken sensitivity 0.190 -> 0.172 (-1.8 pp) and macro F1 0.430 ->
+# 0.423 (-0.7 pp). See derived/task1_kraken_spec_report.md and
+# src/task1_drug_id/explore_kraken_specificity.py.
 # DO NOT re-pick these on the 100% fit — that would optimistically bias
 # the deployment thresholds. Re-pick only if the underlying feature set
 # or training distribution materially changes.
 TAU_DRUG = 0.57
-TAU_KRAKEN = 0.45
+TAU_KRAKEN = 0.50
 
 
 def load_features_and_y() -> tuple[pd.DataFrame, np.ndarray, np.ndarray]:

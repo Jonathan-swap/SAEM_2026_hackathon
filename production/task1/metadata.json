@@ -8,7 +8,7 @@
     "3": "Coral Dust"
   },
   "tau_drug": 0.57,
-  "tau_kraken": 0.45,
+  "tau_kraken": 0.5,
   "triton_prev": 0.5151515151515151,
   "feature_columns": [
     "triage_heart_rate",
@@ -115,5 +115,5 @@
   "sklearn_version": "1.8.0",
   "numpy_version": "2.4.4",
   "python": "3.13.11",
-  "fitted_utc": "2026-05-18T16:32:21Z"
+  "fitted_utc": "2026-05-18T17:01:27Z"
 }
