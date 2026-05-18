@@ -720,6 +720,82 @@ calibration, better holdout AUC than the §7e cascade.
 
 Full analysis: [`research/05_cascade_variants.md`](research/05_cascade_variants.md).
 
+#### Deeper analysis via `evaluate_cascades.py`
+
+A separate analysis layer reads the comparison summary and produces
+six structured views. No model fitting — pure analysis.
+
+```powershell
+.venv\Scripts\python.exe src\task1_drug_id\evaluate_cascades.py
+```
+
+Outputs:
+- `derived/task1_cascade_evaluation_report.md` (structured analysis)
+- `derived/task1_cascade_evaluation_rankings.csv` (long-form rank table)
+
+**Win counts across 24 metric cells** (2 splits × 3 models × 4 metrics:
+macro ROC-AUC, macro PR-AUC, accuracy, log-loss):
+
+| Architecture | Wins | Win rate |
+|---|---:|---:|
+| **Cascade B** (tier-1 + K-vs-rest + prev) | **19** | **79%** |
+| Cascade A (tier-1 + tier-2-multi) | 4 | 17% |
+| Direct 4-class | 3 | 12% |
+| Cascade C (tier-1 + K-vs-rest + T-vs-C model) | 3 | 12% |
+
+**Consistency** — does each cascade beat direct on **both** CV and
+holdout?
+
+| Model | Cascade | Δ AUC CV | Δ AUC holdout | Both? |
+|---|---|---:|---:|---|
+| logreg | A | −0.013 | +0.008 | no |
+| **logreg** | **B** | **+0.001** | **+0.060** | **YES** |
+| logreg | C | −0.019 | +0.007 | no |
+| **rforest** | **A** | **+0.004** | **+0.019** | **YES** |
+| **rforest** | **B** | **+0.005** | **+0.030** | **YES** |
+| rforest | C | −0.000 | +0.023 | no |
+| hgb | A | −0.022 | +0.005 | no |
+| **hgb** | **B** | **+0.027** | **+0.040** | **YES** ← biggest mean Δ |
+| hgb | C | −0.002 | +0.014 | no |
+
+**Four (model × cascade) pairs are consistent winners; three of the
+four are Cascade B.** hgb × Cascade B has the largest mean Δ across
+the two splits (+0.033).
+
+**Stability across model families** (lower spread = more
+model-agnostic; matters because we don't always know which model
+will land best on Phase-2 data):
+
+| Architecture | Mean (holdout) | Std | Spread |
+|---|---:|---:|---:|
+| **Cascade B** | **0.702** | **0.029** | **0.065** ← tightest |
+| Direct | 0.658 | 0.041 | 0.089 |
+| Cascade A | 0.669 | 0.043 | 0.099 |
+| Cascade C | 0.673 | 0.046 | 0.105 |
+
+Cascade B not only has the highest mean holdout AUC, it has the
+**lowest variance** across logreg/rforest/hgb — switching model
+families costs you less if you ship Cascade B.
+
+**Per-class OvR-AUC winners on the holdout** (which architecture
+wins each class for each model?):
+
+| Class | Winning architecture (most frequent across the 3 models) |
+|---|---|
+| None | Cascade A — 3/3 model families |
+| Kraken | Cascade B — 2/3 (rforest, logreg). Direct wins hgb. |
+| **Triton** | **Cascade B — 3/3 model families** |
+| **Coral** | **Cascade B — 3/3 model families** |
+
+Cascade B sweeps Triton and Coral OvR AUC across every model — the
+prevalence-based T/C split is more discriminating than any fitted
+T-vs-C model. Cascade A wins None (because tier-1's binary
+predictions feed both architectures equally, but A's softer 4-class
+output produces better None calibration than B's sharper
+"1 − P(drug)" decision boundary). The auto-generated recommendation
+balances all four classes via macro AUC and lands on **hgb ×
+Cascade-B**.
+
 ---
 
 ## 8. Train + evaluate Task 2 (4h deterioration)
